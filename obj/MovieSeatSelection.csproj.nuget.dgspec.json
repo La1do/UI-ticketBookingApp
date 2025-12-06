@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\MovieSeatSelection\\MovieSeatSelection.csproj": {}
+    "D:\\UI-ticketBookingApp\\MovieSeatSelection.csproj": {}
   },
   "projects": {
-    "D:\\MovieSeatSelection\\MovieSeatSelection.csproj": {
+    "D:\\UI-ticketBookingApp\\MovieSeatSelection.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\MovieSeatSelection\\MovieSeatSelection.csproj",
+        "projectUniqueName": "D:\\UI-ticketBookingApp\\MovieSeatSelection.csproj",
         "projectName": "MovieSeatSelection",
-        "projectPath": "D:\\MovieSeatSelection\\MovieSeatSelection.csproj",
+        "projectPath": "D:\\UI-ticketBookingApp\\MovieSeatSelection.csproj",
         "packagesPath": "C:\\Users\\truong\\.nuget\\packages\\",
-        "outputPath": "D:\\MovieSeatSelection\\obj\\",
+        "outputPath": "D:\\UI-ticketBookingApp\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\truong\\AppData\\Roaming\\NuGet\\NuGet.Config"
