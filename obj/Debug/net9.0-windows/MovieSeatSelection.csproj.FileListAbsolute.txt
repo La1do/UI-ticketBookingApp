@@ -1,0 +1,14 @@
+D:\MovieSeatSelection\obj\Debug\net9.0-windows\MovieSeatSelection.GeneratedMSBuildEditorConfig.editorconfig
+D:\MovieSeatSelection\obj\Debug\net9.0-windows\MovieSeatSelection.AssemblyInfoInputs.cache
+D:\MovieSeatSelection\obj\Debug\net9.0-windows\MovieSeatSelection.AssemblyInfo.cs
+D:\MovieSeatSelection\obj\Debug\net9.0-windows\MovieSeatSelection.csproj.CoreCompileInputs.cache
+D:\MovieSeatSelection\bin\Debug\net9.0-windows\MovieSeatSelection.exe
+D:\MovieSeatSelection\bin\Debug\net9.0-windows\MovieSeatSelection.deps.json
+D:\MovieSeatSelection\bin\Debug\net9.0-windows\MovieSeatSelection.runtimeconfig.json
+D:\MovieSeatSelection\bin\Debug\net9.0-windows\MovieSeatSelection.dll
+D:\MovieSeatSelection\bin\Debug\net9.0-windows\MovieSeatSelection.pdb
+D:\MovieSeatSelection\obj\Debug\net9.0-windows\MovieSeatSelection.dll
+D:\MovieSeatSelection\obj\Debug\net9.0-windows\refint\MovieSeatSelection.dll
+D:\MovieSeatSelection\obj\Debug\net9.0-windows\MovieSeatSelection.pdb
+D:\MovieSeatSelection\obj\Debug\net9.0-windows\MovieSeatSelection.genruntimeconfig.cache
+D:\MovieSeatSelection\obj\Debug\net9.0-windows\ref\MovieSeatSelection.dll
