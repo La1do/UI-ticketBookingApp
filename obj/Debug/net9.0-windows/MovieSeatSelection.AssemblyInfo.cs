@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MovieSeatSelection")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e49831bd99e89851587be1e815bb1868a27ffa2a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ef937b02d3dc5b8c39905a4a5fbe5cb3eecc47b4")]
 [assembly: System.Reflection.AssemblyProductAttribute("MovieSeatSelection")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MovieSeatSelection")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
