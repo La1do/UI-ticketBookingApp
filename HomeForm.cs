@@ -49,7 +49,7 @@ namespace MovieSeatSelection
 
         private void BtnCinemaBooking_Click(object sender, EventArgs e)
         {
-            CinemaTicketBooking.Form1 form = new CinemaTicketBooking.Form1();
+            CinemaTicketBooking.MovieSelectionForm form = new CinemaTicketBooking.MovieSelectionForm();
             form.Show();
             form.FormClosed += (s, args) => this.Show();
             this.Hide();
