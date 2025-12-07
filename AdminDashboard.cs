@@ -31,6 +31,7 @@ namespace BullyAlgorithmDemo
 
         private System.Windows.Forms.Timer refreshTimer = null!;
         private bool isLoadingFromApi = false;
+        private SocketService? socketService;
 
         public AdminDashboard()
         {
@@ -42,10 +43,20 @@ namespace BullyAlgorithmDemo
             // Load data từ API
             LoadDataFromApi();
 
-            // Setup timer để refresh định kỳ (mỗi 5 giây)
+            // Setup socket service cho real-time updates
+            InitializeSocketService();
+
+            // Setup timer để refresh định kỳ (fallback nếu socket không hoạt động, mỗi 2 giây)
             refreshTimer = new System.Windows.Forms.Timer();
-            refreshTimer.Interval = 5000;
-            refreshTimer.Tick += async (s, e) => await RefreshData();
+            refreshTimer.Interval = 2000; // 2 giây để đảm bảo cập nhật nhanh nếu socket không hoạt động
+            refreshTimer.Tick += async (s, e) => 
+            {
+                // Chỉ refresh nếu socket không kết nối
+                if (socketService == null || !socketService.IsConnected)
+                {
+                    await RefreshData();
+                }
+            };
             refreshTimer.Start();
         }
 
@@ -531,10 +542,135 @@ namespace BullyAlgorithmDemo
             actionCell.Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
         }
 
+        private async void InitializeSocketService()
+        {
+            try
+            {
+                socketService = new SocketService("http://localhost:3000");
+
+                // Lắng nghe cập nhật seats
+                socketService.OnSeatsUpdate += (seats) =>
+                {
+                    if (this.InvokeRequired)
+                    {
+                        this.Invoke(new Action(() => HandleSeatsUpdate(seats)));
+                    }
+                    else
+                    {
+                        HandleSeatsUpdate(seats);
+                    }
+                };
+
+                // Lắng nghe cập nhật nodes
+                socketService.OnNodesUpdate += (nodes) =>
+                {
+                    if (this.InvokeRequired)
+                    {
+                        this.Invoke(new Action(() => HandleNodesUpdate(nodes)));
+                    }
+                    else
+                    {
+                        HandleNodesUpdate(nodes);
+                    }
+                };
+
+                // Lắng nghe cập nhật transactions
+                socketService.OnTransactionsUpdate += (transactions) =>
+                {
+                    if (this.InvokeRequired)
+                    {
+                        this.Invoke(new Action(() => HandleTransactionsUpdate(transactions)));
+                    }
+                    else
+                    {
+                        HandleTransactionsUpdate(transactions);
+                    }
+                };
+
+                // Lắng nghe thay đổi trạng thái kết nối
+                socketService.OnConnectionStatusChanged += (isConnected) =>
+                {
+                    if (this.InvokeRequired)
+                    {
+                        this.Invoke(new Action(() => HandleConnectionStatusChanged(isConnected)));
+                    }
+                    else
+                    {
+                        HandleConnectionStatusChanged(isConnected);
+                    }
+                };
+
+                // Kết nối socket
+                await socketService.ConnectAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing socket service: {ex.Message}");
+                subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Socket Offline - Using Polling)";
+            }
+        }
+
+        private void HandleSeatsUpdate(List<SeatDto> seats)
+        {
+            Console.WriteLine($"[AdminDashboard] HandleSeatsUpdate called with {seats?.Count ?? 0} seats at {DateTime.Now:HH:mm:ss.fff}");
+            if (seats != null && seats.Count > 0)
+            {
+                if (seatControls == null)
+                {
+                    // Nếu chưa có seat map, tạo mới
+                    CreateSeatMapFromApi(seats);
+                }
+                else
+                {
+                    // Cập nhật seat map hiện có
+                    UpdateSeatMapFromApi(seats);
+                }
+                systemActiveButton.Text = "⚡ System Active";
+                systemActiveButton.BackColor = ColorTranslator.FromHtml("#DB2777");
+                subtitleLabel.Text = $"Bully Algorithm • Real-time Node Coordination (Last update: {DateTime.Now:HH:mm:ss})";
+            }
+        }
+
+        private void HandleNodesUpdate(List<NodeDto> nodes)
+        {
+            Console.WriteLine($"[AdminDashboard] HandleNodesUpdate called with {nodes?.Count ?? 0} nodes at {DateTime.Now:HH:mm:ss.fff}");
+            if (nodes != null && nodes.Count > 0)
+            {
+                UpdateNodesFromApi(nodes);
+            }
+        }
+
+        private void HandleTransactionsUpdate(List<TransactionDto> transactions)
+        {
+            Console.WriteLine($"[AdminDashboard] HandleTransactionsUpdate called with {transactions?.Count ?? 0} transactions at {DateTime.Now:HH:mm:ss.fff}");
+            if (transactions != null && transactions.Count > 0)
+            {
+                UpdateTransactionGridFromApi(transactions);
+            }
+        }
+
+        private void HandleConnectionStatusChanged(bool isConnected)
+        {
+            Console.WriteLine($"[AdminDashboard] Connection status changed: {isConnected} at {DateTime.Now:HH:mm:ss.fff}");
+            if (isConnected)
+            {
+                subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Socket Connected - Real-time Active)";
+                systemActiveButton.Text = "⚡ System Active";
+                systemActiveButton.BackColor = ColorTranslator.FromHtml("#DB2777");
+            }
+            else
+            {
+                subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Socket Disconnected - Using Polling)";
+                systemActiveButton.Text = "⚠️ Socket Offline";
+                systemActiveButton.BackColor = ColorTranslator.FromHtml("#F59E0B");
+            }
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             refreshTimer?.Stop();
             refreshTimer?.Dispose();
+            socketService?.Dispose();
             base.OnFormClosing(e);
         }
     }
