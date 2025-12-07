@@ -27,3 +27,6 @@ D:\UI-ticketBookingApp\obj\Debug\net9.0-windows\refint\MovieSeatSelection.dll
 D:\UI-ticketBookingApp\obj\Debug\net9.0-windows\MovieSeatSelection.pdb
 D:\UI-ticketBookingApp\obj\Debug\net9.0-windows\MovieSeatSelection.genruntimeconfig.cache
 D:\UI-ticketBookingApp\obj\Debug\net9.0-windows\ref\MovieSeatSelection.dll
+D:\UI-ticketBookingApp\obj\Debug\net9.0-windows\MovieSeatSelection.csproj.AssemblyReference.cache
+D:\UI-ticketBookingApp\bin\Debug\net9.0-windows\Newtonsoft.Json.dll
+D:\UI-ticketBookingApp\obj\Debug\net9.0-windows\MovieSea.42BB1655.Up2Date

@@ -2,6 +2,9 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.ComponentModel;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BullyAlgorithmDemo
 {
@@ -11,6 +14,7 @@ namespace BullyAlgorithmDemo
         private Label titleLabel = null!;
         private Label subtitleLabel = null!;
         private Button systemActiveButton = null!;
+        private Button refreshButton = null!;
 
         private Panel nodePanel = null!;
         private Label nodeStatusLabel = null!;
@@ -24,13 +28,24 @@ namespace BullyAlgorithmDemo
         private Label transactionLabel = null!;
         private DataGridView transactionGrid = null!;
 
+        private System.Windows.Forms.Timer refreshTimer = null!;
+        private bool isLoadingFromApi = false;
+
         public AdminDashboard()
         {
             InitializeComponents();
             this.MaximizeBox = false;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             SetupLayout();
-            PopulateSampleData();
+
+            // Load data từ API
+            LoadDataFromApi();
+
+            // Setup timer để refresh định kỳ (mỗi 5 giây)
+            refreshTimer = new System.Windows.Forms.Timer();
+            refreshTimer.Interval = 5000;
+            refreshTimer.Tick += async (s, e) => await RefreshData();
+            refreshTimer.Start();
         }
 
         private void InitializeComponents()
@@ -77,6 +92,19 @@ namespace BullyAlgorithmDemo
                 Font = new Font("Segoe UI", 10)
             };
             systemActiveButton.FlatAppearance.BorderSize = 0;
+
+            refreshButton = new Button
+            {
+                Text = "🔄 Refresh",
+                Size = new Size(100, 40),
+                Location = new Point(920, 20),
+                BackColor = ColorTranslator.FromHtml("#DB2777"),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10)
+            };
+            refreshButton.FlatAppearance.BorderSize = 0;
+            refreshButton.Click += async (s, e) => await RefreshData();
 
             // Node Status Panel
             nodePanel = new Panel
@@ -159,13 +187,13 @@ namespace BullyAlgorithmDemo
         {
             headerPanel.Controls.Add(titleLabel);
             headerPanel.Controls.Add(subtitleLabel);
+            headerPanel.Controls.Add(refreshButton);
             headerPanel.Controls.Add(systemActiveButton);
 
             nodePanel.Controls.Add(nodeStatusLabel);
             CreateNodeControls();
 
             seatMapPanel.Controls.Add(seatMapLabel);
-            CreateSeatMap();
 
             transactionPanel.Controls.Add(transactionLabel);
             transactionPanel.Controls.Add(transactionGrid);
@@ -190,14 +218,85 @@ namespace BullyAlgorithmDemo
             }
         }
 
-        private void CreateSeatMap()
+        private async void LoadDataFromApi()
         {
+            try
+            {
+                isLoadingFromApi = true;
+                subtitleLabel.Text = "Loading data from server...";
+
+                var seats = await ApiService.GetSeatsAsync();
+
+                if (seats != null && seats.Count > 0)
+                {
+                    // Load thành công từ API
+                    CreateSeatMapFromApi(seats);
+                    subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Live Data)";
+                    isLoadingFromApi = false;
+                }
+                else
+                {
+                    // Không load được, hiển thị bảng trống
+                    CreateEmptySeatMap();
+                    subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Server Offline)";
+                    systemActiveButton.Text = "⚠️ Server Offline";
+                    systemActiveButton.BackColor = ColorTranslator.FromHtml("#EF4444");
+                    isLoadingFromApi = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Lỗi, hiển thị bảng trống
+                Console.WriteLine($"Error loading from API: {ex.Message}");
+                CreateEmptySeatMap();
+                subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Connection Error)";
+                systemActiveButton.Text = "⚠️ Connection Error";
+                systemActiveButton.BackColor = ColorTranslator.FromHtml("#EF4444");
+                isLoadingFromApi = false;
+            }
+        }
+
+        private async Task RefreshData()
+        {
+            if (isLoadingFromApi) return;
+
+            try
+            {
+                var seats = await ApiService.GetSeatsAsync();
+
+                if (seats != null && seats.Count > 0)
+                {
+                    UpdateSeatMapFromApi(seats);
+                    systemActiveButton.Text = "⚡ System Active";
+                    systemActiveButton.BackColor = ColorTranslator.FromHtml("#DB2777");
+                    subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Live Data)";
+                }
+                else
+                {
+                    systemActiveButton.Text = "⚠️ Server Offline";
+                    systemActiveButton.BackColor = ColorTranslator.FromHtml("#EF4444");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error refreshing data: {ex.Message}");
+                systemActiveButton.Text = "⚠️ Connection Error";
+                systemActiveButton.BackColor = ColorTranslator.FromHtml("#EF4444");
+            }
+        }
+
+        private void CreateSeatMapFromApi(List<SeatDto> seats)
+        {
+            // Clear existing seats
+            seatMapPanel.Controls.Clear();
+            seatMapPanel.Controls.Add(seatMapLabel);
+
             string[] rows = { "A", "B", "C", "D", "E", "F", "G" };
             int cols = 10;
 
             seatControls = new SeatControl[rows.Length, cols];
 
-            int seatWidth = (seatMapPanel.Width - 70) / cols; // trừ padding
+            int seatWidth = (seatMapPanel.Width - 70) / cols;
             int seatHeight = 50;
 
             for (int i = 0; i < rows.Length; i++)
@@ -205,11 +304,15 @@ namespace BullyAlgorithmDemo
                 for (int j = 0; j < cols; j++)
                 {
                     string seatName = $"{rows[i]}{j + 1}";
-                    bool isOccupied = (i == 0 && j == 1) || (i == 1 && j == 1) ||
-                                      (i == 1 && j == 3) || (i == 2 && j == 2) ||
-                                      (i == 3 && j == 0) || (i == 3 && j == 3);
 
-                    var seat = new SeatControl(seatName, isOccupied)
+                    // Tìm seat trong API data
+                    var seatData = seats.FirstOrDefault(s => s.seatNumber == seatName);
+
+                    bool isBooked = seatData != null && !seatData.IsAvailable;
+                    string customerName = isBooked ? seatData?.customerName ?? "Unknown" : "";
+                    int? nodeNumber = isBooked ? seatData?.bookedByNode : null;
+
+                    var seat = new SeatControl(seatName, isBooked, customerName, nodeNumber)
                     {
                         Size = new Size(seatWidth, seatHeight),
                         Location = new Point(20 + j * (seatWidth + 3), 40 + i * (seatHeight + 10)),
@@ -221,16 +324,62 @@ namespace BullyAlgorithmDemo
             }
         }
 
-
-        private void PopulateSampleData()
+        private void UpdateSeatMapFromApi(List<SeatDto> seats)
         {
-            AddTransactionRow("22:03:36", "Node 3", "HEARTBEAT", "Leader Node 3 sent heartbeat");
-            AddTransactionRow("22:03:33", "Node 5", "BUY", "Customer Lisa Ray bought Seat B4");
-            AddTransactionRow("14:32:16", "Node 3", "BUY", "Customer Jane Doe bought Seat A2");
-            AddTransactionRow("14:32:18", "Node 7", "LOG", "Node 7 locked Seat A4");
-            AddTransactionRow("14:32:28", "Node 7", "BUY", "Customer John Smith bought Seat A4");
-            AddTransactionRow("14:32:26", "Node 5", "BUY", "Customer Alice Johnson bought Seat B2");
-            AddTransactionRow("14:32:38", "Node 3", "HEARTBEAT", "Leader Node 3 sent heartbeat");
+            if (seatControls == null) return;
+
+            string[] rows = { "A", "B", "C", "D", "E", "F", "G" };
+            int cols = 10;
+
+            for (int i = 0; i < rows.Length; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    string seatName = $"{rows[i]}{j + 1}";
+                    var seatData = seats.FirstOrDefault(s => s.seatNumber == seatName);
+
+                    if (seatData != null && seatControls[i, j] != null)
+                    {
+                        bool isBooked = !seatData.IsAvailable;
+                        string customerName = isBooked ? seatData.customerName ?? "Unknown" : "";
+                        int? nodeNumber = isBooked ? seatData.bookedByNode : null;
+
+                        seatControls[i, j].UpdateSeat(isBooked, customerName, nodeNumber);
+                    }
+                }
+            }
+        }
+
+        private void CreateEmptySeatMap()
+        {
+            // Clear existing seats
+            seatMapPanel.Controls.Clear();
+            seatMapPanel.Controls.Add(seatMapLabel);
+
+            string[] rows = { "A", "B", "C", "D", "E", "F", "G" };
+            int cols = 10;
+
+            seatControls = new SeatControl[rows.Length, cols];
+
+            int seatWidth = (seatMapPanel.Width - 70) / cols;
+            int seatHeight = 50;
+
+            for (int i = 0; i < rows.Length; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    string seatName = $"{rows[i]}{j + 1}";
+
+                    var seat = new SeatControl(seatName, false)
+                    {
+                        Size = new Size(seatWidth, seatHeight),
+                        Location = new Point(20 + j * (seatWidth + 3), 40 + i * (seatHeight + 10)),
+                    };
+
+                    seatControls[i, j] = seat;
+                    seatMapPanel.Controls.Add(seat);
+                }
+            }
         }
 
         private void AddTransactionRow(string time, string source, string action, string message)
@@ -262,6 +411,13 @@ namespace BullyAlgorithmDemo
             actionCell.Style.ForeColor = Color.White;
             actionCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
             actionCell.Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            refreshTimer?.Stop();
+            refreshTimer?.Dispose();
+            base.OnFormClosing(e);
         }
     }
 
@@ -398,15 +554,19 @@ namespace BullyAlgorithmDemo
         private Label? nodeLabel;
 
         private string seatName;
-        private bool isOccupied;
+        private bool isBooked;
+        private string? realCustomerName;
+        private int? realNodeNumber;
 
-        public SeatControl(string name, bool occupied)
+        public SeatControl(string name, bool Booked, string? customerName = null, int? nodeNumber = null)
         {
             seatName = name;
-            isOccupied = occupied;
+            isBooked = Booked;
+            realCustomerName = customerName;
+            realNodeNumber = nodeNumber;
 
             this.Size = new Size(200, 45);
-            this.BackColor = isOccupied ? ColorTranslator.FromHtml("#7C3AED") : Color.White;
+            this.BackColor = isBooked ? ColorTranslator.FromHtml("#7C3AED") : Color.White;
 
             InitializeSeatComponents();
         }
@@ -417,16 +577,20 @@ namespace BullyAlgorithmDemo
             {
                 Text = seatName,
                 Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                ForeColor = isOccupied ? Color.White : Color.Black,
+                ForeColor = isBooked ? Color.White : Color.Black,
                 Location = new Point(10, 5),
                 AutoSize = true
             };
 
+            string occupantText = isBooked
+                ? (realCustomerName ?? GetOccupantName())
+                : "Available";
+
             occupantLabel = new Label
             {
-                Text = isOccupied ? GetOccupantName() : "Available",
+                Text = occupantText,
                 Font = new Font("Segoe UI", 9),
-                ForeColor = isOccupied ? Color.White : Color.Gray,
+                ForeColor = isBooked ? Color.White : Color.Gray,
                 Location = new Point(10, 23),
                 AutoSize = true
             };
@@ -434,11 +598,60 @@ namespace BullyAlgorithmDemo
             this.Controls.Add(seatLabel);
             this.Controls.Add(occupantLabel);
 
-            if (isOccupied)
+            if (isBooked)
+            {
+                int displayNodeNumber = realNodeNumber ?? GetNodeNumber();
+
+                nodeLabel = new Label
+                {
+                    Text = $"via Node {displayNodeNumber}",
+                    Font = new Font("Segoe UI", 7),
+                    ForeColor = Color.White,
+                    Location = new Point(130, 15),
+                    Size = new Size(65, 20),
+                    BackColor = ColorTranslator.FromHtml("#5B21B6"),
+                    TextAlign = ContentAlignment.MiddleCenter
+                };
+                this.Controls.Add(nodeLabel);
+            }
+        }
+
+        public void UpdateSeat(bool Booked, string? customerName, int? nodeNumber)
+        {
+            if (isBooked == Booked &&
+                realCustomerName == customerName &&
+                realNodeNumber == nodeNumber)
+            {
+                return; // Không có thay đổi
+            }
+
+            isBooked = Booked;
+            realCustomerName = customerName;
+            realNodeNumber = nodeNumber;
+
+            // Update UI
+            this.BackColor = isBooked ? ColorTranslator.FromHtml("#7C3AED") : Color.White;
+            seatLabel.ForeColor = isBooked ? Color.White : Color.Black;
+
+            string occupantText = isBooked
+                ? (realCustomerName ?? "Unknown")
+                : "Available";
+
+            occupantLabel.Text = occupantText;
+            occupantLabel.ForeColor = isBooked ? Color.White : Color.Gray;
+
+            // Update node label
+            if (nodeLabel != null)
+            {
+                this.Controls.Remove(nodeLabel);
+                nodeLabel = null;
+            }
+
+            if (isBooked && nodeNumber.HasValue)
             {
                 nodeLabel = new Label
                 {
-                    Text = $"via Node {GetNodeNumber()}",
+                    Text = $"via Node {nodeNumber.Value}",
                     Font = new Font("Segoe UI", 7),
                     ForeColor = Color.White,
                     Location = new Point(130, 15),
