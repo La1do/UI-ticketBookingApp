@@ -178,10 +178,10 @@ namespace BullyAlgorithmDemo
             transactionGrid.Columns.Add("Action", "Action");
             transactionGrid.Columns.Add("Message", "Message");
 
-            transactionGrid.Columns[0].Width = 100;
+            transactionGrid.Columns[0].Width = 170;
             transactionGrid.Columns[1].Width = 150;
             transactionGrid.Columns[2].Width = 150;
-            transactionGrid.Columns[3].Width = 700;
+            transactionGrid.Columns[3].Width = 640;
         }
 
         private void SetupLayout()
@@ -383,13 +383,13 @@ namespace BullyAlgorithmDemo
             if (nodeControls == null) return;
 
             Console.WriteLine($"Updating {nodes.Count} nodes...");
-            
+
             foreach (var nodeData in nodes)
             {
                 // Tìm node control tương ứng với node id
                 // Node id có thể bắt đầu từ 1 hoặc 0, cần xử lý cả hai trường hợp
                 int index = -1;
-                
+
                 // Thử với id bắt đầu từ 1
                 if (nodeData.id >= 1 && nodeData.id <= nodeControls.Length)
                 {
@@ -400,15 +400,15 @@ namespace BullyAlgorithmDemo
                 {
                     index = nodeData.id;
                 }
-                
+
                 if (index >= 0 && index < nodeControls.Length && nodeControls[index] != null)
                 {
                     // API trả về boolean, không cần convert
                     bool isAlive = nodeData.isAlive;
                     bool isLeader = nodeData.isLeader;
-                    
-            
-                    
+
+
+
                     nodeControls[index].UpdateNode(isAlive, isLeader);
                 }
                 else
@@ -486,7 +486,8 @@ namespace BullyAlgorithmDemo
 
             foreach (var transaction in sortedTransactions)
             {
-                string time = transaction.timestamp.ToString("HH:mm:ss");
+                string time = transaction.timestamp.ToString("dd/MM/yyyy HH:mm:ss");
+
                 string source = $"Node {transaction.nodeId}";
                 string action = transaction.actionType.ToUpper();
                 string message = transaction.description;
@@ -688,7 +689,7 @@ namespace BullyAlgorithmDemo
             this.isLeader = isLeader;
             leaderIcon.Visible = isLeader && isAlive; // Chỉ hiển thị vương miện nếu node còn alive
             roleLabel.Text = isLeader ? "Leader" : "Follower";
-            
+
             // Làm nổi bật vương miện khi là leader
             if (isLeader && isAlive)
             {
@@ -754,7 +755,7 @@ namespace BullyAlgorithmDemo
             if (isBooked)
             {
                 int displayNodeNumber = realNodeNumber ?? GetNodeNumber();
-                
+
 
                 nodeLabel = new Label
                 {
