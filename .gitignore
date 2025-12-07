@@ -1,0 +1,8 @@
+# Bỏ qua thư mục build
+[Bb]in/
+[Oo]bj/
+
+# Bỏ qua file cấu hình người dùng của Visual Studio (không nên share vì chứa setting riêng của máy bạn)
+.vs/
+*.user
+*.suo
