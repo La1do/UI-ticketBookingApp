@@ -228,7 +228,7 @@ namespace BullyAlgorithmDemo
                 subtitleLabel.Text = "Loading data from server...";
 
                 // Load cả seats và nodes từ API
-                var seatsTask = ApiService.GetSeatsAsync();
+                var seatsTask = ApiServiceSeat.GetSeatsAsync();
                 var nodesTask = ApiServiceNode.GetNodesAsync();
 
                 await Task.WhenAll(seatsTask, nodesTask);
@@ -284,7 +284,7 @@ namespace BullyAlgorithmDemo
             try
             {
                 // Refresh cả seats và nodes
-                var seatsTask = ApiService.GetSeatsAsync();
+                var seatsTask = ApiServiceSeat.GetSeatsAsync();
                 var nodesTask = ApiServiceNode.GetNodesAsync();
 
                 await Task.WhenAll(seatsTask, nodesTask);

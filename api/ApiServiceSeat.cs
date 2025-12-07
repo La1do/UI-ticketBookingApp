@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 
-public static class ApiService
+public static class ApiServiceSeat
 {
     private static readonly HttpClient client = new HttpClient()
     {
