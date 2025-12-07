@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using api;
 
 namespace BullyAlgorithmDemo
 {
@@ -206,11 +207,12 @@ namespace BullyAlgorithmDemo
 
         private void CreateNodeControls()
         {
+            // Tạo node controls với dữ liệu mẫu ban đầu, sẽ được cập nhật từ API
             nodeControls = new NodeControl[6];
 
             for (int i = 0; i < 6; i++)
             {
-                nodeControls[i] = new NodeControl(i + 1, i == 2)
+                nodeControls[i] = new NodeControl(i + 1, false)
                 {
                     Location = new Point(15 + (i * 190), 40)
                 };
@@ -225,7 +227,26 @@ namespace BullyAlgorithmDemo
                 isLoadingFromApi = true;
                 subtitleLabel.Text = "Loading data from server...";
 
-                var seats = await ApiService.GetSeatsAsync();
+                // Load cả seats và nodes từ API
+                var seatsTask = ApiService.GetSeatsAsync();
+                var nodesTask = ApiServiceNode.GetNodesAsync();
+
+                await Task.WhenAll(seatsTask, nodesTask);
+
+                var seats = await seatsTask;
+                var nodes = await nodesTask;
+
+                // Load node data
+                if (nodes != null && nodes.Count > 0)
+                {
+                    Console.WriteLine($"Loaded {nodes.Count} nodes from API");
+                    UpdateNodesFromApi(nodes);
+                }
+                else
+                {
+                    Console.WriteLine("No nodes data from API, keeping default state");
+                    // Nếu không có dữ liệu từ API, giữ trạng thái mặc định (alive)
+                }
 
                 if (seats != null && seats.Count > 0)
                 {
@@ -262,7 +283,24 @@ namespace BullyAlgorithmDemo
 
             try
             {
-                var seats = await ApiService.GetSeatsAsync();
+                // Refresh cả seats và nodes
+                var seatsTask = ApiService.GetSeatsAsync();
+                var nodesTask = ApiServiceNode.GetNodesAsync();
+
+                await Task.WhenAll(seatsTask, nodesTask);
+
+                var seats = await seatsTask;
+                var nodes = await nodesTask;
+
+                // Update node data
+                if (nodes != null && nodes.Count > 0)
+                {
+                    UpdateNodesFromApi(nodes);
+                }
+                else
+                {
+                    Console.WriteLine("No nodes data from API during refresh");
+                }
 
                 if (seats != null && seats.Count > 0)
                 {
@@ -320,6 +358,46 @@ namespace BullyAlgorithmDemo
 
                     seatControls[i, j] = seat;
                     seatMapPanel.Controls.Add(seat);
+                }
+            }
+        }
+
+        private void UpdateNodesFromApi(List<NodeDto> nodes)
+        {
+            if (nodeControls == null) return;
+
+            Console.WriteLine($"Updating {nodes.Count} nodes...");
+            
+            foreach (var nodeData in nodes)
+            {
+                // Tìm node control tương ứng với node id
+                // Node id có thể bắt đầu từ 1 hoặc 0, cần xử lý cả hai trường hợp
+                int index = -1;
+                
+                // Thử với id bắt đầu từ 1
+                if (nodeData.id >= 1 && nodeData.id <= nodeControls.Length)
+                {
+                    index = nodeData.id - 1;
+                }
+                // Thử với id bắt đầu từ 0
+                else if (nodeData.id >= 0 && nodeData.id < nodeControls.Length)
+                {
+                    index = nodeData.id;
+                }
+                
+                if (index >= 0 && index < nodeControls.Length && nodeControls[index] != null)
+                {
+                    // API trả về boolean, không cần convert
+                    bool isAlive = nodeData.isAlive;
+                    bool isLeader = nodeData.isLeader;
+                    
+            
+                    
+                    nodeControls[index].UpdateNode(isAlive, isLeader);
+                }
+                else
+                {
+                    Console.WriteLine($"Warning: Node id {nodeData.id} is out of range (0-{nodeControls.Length - 1})");
                 }
             }
         }
@@ -459,10 +537,11 @@ namespace BullyAlgorithmDemo
             leaderIcon = new Label
             {
                 Text = "👑",
-                Font = new Font("Segoe UI", 12),
-                Location = new Point(150, 5),
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                Location = new Point(145, 3),
                 AutoSize = true,
-                Visible = isLeader
+                Visible = isLeader,
+                ForeColor = ColorTranslator.FromHtml("#FCD34D")
             };
 
             statusLabel = new Label
@@ -544,6 +623,39 @@ namespace BullyAlgorithmDemo
             reviveButton.Visible = false;
             killButton.Visible = true;
             this.BackColor = ColorTranslator.FromHtml("#F0ABFC");
+        }
+
+        public void UpdateNode(bool isAlive, bool isLeader)
+        {
+            // Cập nhật trạng thái alive/dead
+            if (isAlive)
+            {
+                stateLabel.Text = "Alive";
+                stateLabel.ForeColor = ColorTranslator.FromHtml("#701A75");
+                killButton.Visible = true;
+                reviveButton.Visible = false;
+                this.BackColor = ColorTranslator.FromHtml("#F0ABFC");
+            }
+            else
+            {
+                stateLabel.Text = "Dead";
+                stateLabel.ForeColor = Color.Red;
+                killButton.Visible = false;
+                reviveButton.Visible = true;
+                this.BackColor = ColorTranslator.FromHtml("#FCA5A5");
+            }
+
+            // Cập nhật leader status
+            this.isLeader = isLeader;
+            leaderIcon.Visible = isLeader && isAlive; // Chỉ hiển thị vương miện nếu node còn alive
+            roleLabel.Text = isLeader ? "Leader" : "Follower";
+            
+            // Làm nổi bật vương miện khi là leader
+            if (isLeader && isAlive)
+            {
+                leaderIcon.ForeColor = ColorTranslator.FromHtml("#FCD34D"); // Vàng
+                leaderIcon.Font = new Font("Segoe UI", 16, FontStyle.Bold);
+            }
         }
     }
 
