@@ -308,7 +308,7 @@ namespace BullyAlgorithmDemo
                     // Tìm seat trong API data
                     var seatData = seats.FirstOrDefault(s => s.seatNumber == seatName);
 
-                    bool isBooked = seatData != null && !seatData.IsAvailable;
+                    bool isBooked = seatData != null && seatData.IsOccupied;
                     string customerName = isBooked ? seatData?.customerName ?? "Unknown" : "";
                     int? nodeNumber = isBooked ? seatData?.bookedByNode : null;
 
@@ -340,7 +340,7 @@ namespace BullyAlgorithmDemo
 
                     if (seatData != null && seatControls[i, j] != null)
                     {
-                        bool isBooked = !seatData.IsAvailable;
+                        bool isBooked = seatData.IsOccupied;
                         string customerName = isBooked ? seatData.customerName ?? "Unknown" : "";
                         int? nodeNumber = isBooked ? seatData.bookedByNode : null;
 
@@ -569,10 +569,12 @@ namespace BullyAlgorithmDemo
             this.BackColor = isBooked ? ColorTranslator.FromHtml("#7C3AED") : Color.White;
 
             InitializeSeatComponents();
+
         }
 
         private void InitializeSeatComponents()
         {
+
             seatLabel = new Label
             {
                 Text = seatName,
@@ -601,19 +603,20 @@ namespace BullyAlgorithmDemo
             if (isBooked)
             {
                 int displayNodeNumber = realNodeNumber ?? GetNodeNumber();
+                
 
                 nodeLabel = new Label
                 {
                     Text = $"via Node {displayNodeNumber}",
                     Font = new Font("Segoe UI", 7),
                     ForeColor = Color.White,
-                    Location = new Point(130, 15),
+                    Location = new Point(50, 0),
                     Size = new Size(65, 20),
-                    BackColor = ColorTranslator.FromHtml("#5B21B6"),
                     TextAlign = ContentAlignment.MiddleCenter
                 };
                 this.Controls.Add(nodeLabel);
             }
+
         }
 
         public void UpdateSeat(bool Booked, string? customerName, int? nodeNumber)
@@ -654,9 +657,8 @@ namespace BullyAlgorithmDemo
                     Text = $"via Node {nodeNumber.Value}",
                     Font = new Font("Segoe UI", 7),
                     ForeColor = Color.White,
-                    Location = new Point(130, 15),
+                    Location = new Point(50, 0),
                     Size = new Size(65, 20),
-                    BackColor = ColorTranslator.FromHtml("#5B21B6"),
                     TextAlign = ContentAlignment.MiddleCenter
                 };
                 this.Controls.Add(nodeLabel);
