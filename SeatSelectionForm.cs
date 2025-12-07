@@ -3,6 +3,8 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace CinemaTicketBooking
 {
@@ -20,6 +22,9 @@ namespace CinemaTicketBooking
         private int cols = 10;
         private int movieId;
         private string showtime;
+        private List<SeatDto> allSeats = new List<SeatDto>();
+        private Label lblLoading = null!;
+        private string customerName = string.Empty;
 
         public SeatSelectionForm(int movieId, string time)
         {
@@ -106,7 +111,18 @@ namespace CinemaTicketBooking
             gridSeats.BackColor = Color.Transparent;
             centerContainer.Controls.Add(gridSeats);
 
-            GenerateSeats();
+            // Loading label
+            lblLoading = new Label();
+            lblLoading.Text = "Loading seats...";
+            lblLoading.Font = new Font("Segoe UI", 14, FontStyle.Regular);
+            lblLoading.ForeColor = AppColors.TextSecondary;
+            lblLoading.AutoSize = true;
+            lblLoading.BackColor = Color.Transparent;
+            lblLoading.Location = new Point((700 - 150) / 2, 200);
+            centerContainer.Controls.Add(lblLoading);
+
+            // Load seats from API
+            _ = LoadSeatsAsync();
 
             // Legend
             int legendY = 130 + gridSeats.Height + 30;
@@ -198,6 +214,54 @@ namespace CinemaTicketBooking
             }
         }
 
+        private async Task LoadSeatsAsync()
+        {
+            try
+            {
+                // Fetch seats from API
+                allSeats = await ApiServiceSeat.GetSeatsAsync();
+                
+                // Hide loading label
+                if (lblLoading != null)
+                {
+                    lblLoading.Visible = false;
+                }
+
+                // Clear existing seats before generating new ones
+                if (gridSeats != null)
+                {
+                    gridSeats.Controls.Clear();
+                }
+
+                // Generate seats from API data
+                GenerateSeats();
+            }
+            catch (Exception ex)
+            {
+                // Show error message
+                if (lblLoading != null)
+                {
+                    lblLoading.Text = "Error loading seats. Using default layout.";
+                    lblLoading.ForeColor = Color.FromArgb(239, 68, 68);
+                }
+                
+                MessageBox.Show(
+                    $"Failed to load seats from API.\nError: {ex.Message}\n\nUsing default seat layout.",
+                    "Warning",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                // Clear existing seats before generating new ones
+                if (gridSeats != null)
+                {
+                    gridSeats.Controls.Clear();
+                }
+
+                // Generate seats with empty data (all available)
+                GenerateSeats();
+            }
+        }
+
         private void GenerateSeats()
         {
             char[] rowLabels = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H' };
@@ -208,12 +272,22 @@ namespace CinemaTicketBooking
                 {
                     string seatName = $"{rowLabels[r]}{c}";
                     
-                    // Randomly book some seats for demo
-                    bool isBooked = (r == 2 && c == 5) || (r == 3 && c == 6) || (r == 4 && c == 3);
+                    // Find seat in API data
+                    SeatDto? seatDto = allSeats?.FirstOrDefault(s => 
+                        s.seatNumber.Equals(seatName, StringComparison.OrdinalIgnoreCase));
+                    
+                    // Determine if seat is booked
+                    bool isBooked = seatDto != null && seatDto.IsOccupied;
 
                     Button btnSeat = new Button();
                     btnSeat.Text = seatName;
-                    btnSeat.Tag = new SeatInfo { Name = seatName, IsBooked = isBooked };
+                    btnSeat.Tag = new SeatInfo 
+                    { 
+                        Name = seatName, 
+                        IsBooked = isBooked,
+                        SeatId = seatDto?.id ?? 0,
+                        SeatDto = seatDto
+                    };
                     btnSeat.Size = new Size(50, 50);
                     btnSeat.Margin = new Padding(2);
                     btnSeat.FlatStyle = FlatStyle.Flat;
@@ -232,6 +306,8 @@ namespace CinemaTicketBooking
         {
             public string Name { get; set; } = string.Empty;
             public bool IsBooked { get; set; } = false;
+            public int SeatId { get; set; } = 0;
+            public SeatDto? SeatDto { get; set; }
         }
 
         private void BtnSeat_Paint(object? sender, PaintEventArgs e)
@@ -328,54 +404,26 @@ namespace CinemaTicketBooking
                 // Không cho click ghế đã được book bởi người khác
                 if (seatInfo.IsBooked)
                 {
-                    MessageBox.Show(
-                        $"Seat {seatInfo.Name} is already booked by another customer.", 
-                        "Seat Unavailable", 
-                        MessageBoxButtons.OK, 
-                        MessageBoxIcon.Warning);
                     return;
                 }
 
-                // Nếu ghế đã trong danh sách của mình, hỏi có muốn bỏ không
+                // Nếu ghế đã trong danh sách của mình, tự động xóa
                 if (myBookedSeats.Contains(seatInfo.Name))
                 {
-                    DialogResult result = MessageBox.Show(
-                        $"Do you want to remove seat {seatInfo.Name} from your selection?", 
-                        "Remove Seat", 
-                        MessageBoxButtons.YesNo, 
-                        MessageBoxIcon.Question);
-
-                    if (result == DialogResult.Yes)
-                    {
-                        myBookedSeats.Remove(seatInfo.Name);
-                        UpdateUI();
-                    }
+                    myBookedSeats.Remove(seatInfo.Name);
+                    UpdateUI();
                 }
                 else
                 {
-                    // Ghế available, hỏi có muốn chọn không
+                    // Ghế available, tự động chọn
                     // Kiểm tra giới hạn trước
                     if (myBookedSeats.Count >= 8)
                     {
-                        MessageBox.Show(
-                            "Maximum 8 seats per booking!", 
-                            "Limit Reached", 
-                            MessageBoxButtons.OK, 
-                            MessageBoxIcon.Warning);
                         return;
                     }
 
-                    DialogResult result = MessageBox.Show(
-                        $"Do you want to book seat {seatInfo.Name}?", 
-                        "Confirm Seat Selection", 
-                        MessageBoxButtons.YesNo, 
-                        MessageBoxIcon.Question);
-
-                    if (result == DialogResult.Yes)
-                    {
-                        myBookedSeats.Add(seatInfo.Name);
-                        UpdateUI();
-                    }
+                    myBookedSeats.Add(seatInfo.Name);
+                    UpdateUI();
                 }
             }
         }
@@ -452,7 +500,7 @@ namespace CinemaTicketBooking
             // Scrollable panel for seat list
             Panel scrollPanel = new Panel();
             scrollPanel.Location = new Point(35, 100);
-            scrollPanel.Size = new Size(480, 400);
+            scrollPanel.Size = new Size(480, 390);
             scrollPanel.AutoScroll = true;
             scrollPanel.BackColor = Color.Transparent;
             cartDialog.Controls.Add(scrollPanel);
@@ -467,10 +515,38 @@ namespace CinemaTicketBooking
                 yPos += 75;
             }
 
+            // Customer name input panel
+            RoundedPanel namePanel = new RoundedPanel();
+            namePanel.Size = new Size(480, 60);
+            namePanel.Location = new Point(35, 490);
+            namePanel.BackColor = AppColors.CardBg;
+            namePanel.BorderRadius = 12;
+            namePanel.EnableHoverEffect = false;
+            cartDialog.Controls.Add(namePanel);
+
+            Label lblCustomerName = new Label();
+            lblCustomerName.Text = "Customer Name:";
+            lblCustomerName.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+            lblCustomerName.ForeColor = Color.White;
+            lblCustomerName.AutoSize = true;
+            lblCustomerName.Location = new Point(25, 0);
+            lblCustomerName.BackColor = Color.Transparent;
+            namePanel.Controls.Add(lblCustomerName);
+
+            TextBox txtCustomerName = new TextBox();
+            txtCustomerName.Font = new Font("Segoe UI", 11, FontStyle.Regular);
+            txtCustomerName.ForeColor = Color.White;
+            txtCustomerName.BackColor = Color.FromArgb(51, 65, 85);
+            txtCustomerName.BorderStyle = BorderStyle.FixedSingle;
+            txtCustomerName.Size = new Size(430, 30);
+            txtCustomerName.Location = new Point(25, 22);
+            txtCustomerName.PlaceholderText = "Enter your name...";
+            namePanel.Controls.Add(txtCustomerName);
+
             // Summary panel
             RoundedPanel summaryPanel = new RoundedPanel();
-            summaryPanel.Size = new Size(480, 70);
-            summaryPanel.Location = new Point(35, 515);
+            summaryPanel.Size = new Size(480, 60);
+            summaryPanel.Location = new Point(35, 570);
             summaryPanel.BackColor = AppColors.CardBg;
             summaryPanel.BorderRadius = 12;
             summaryPanel.EnableHoverEffect = false;
@@ -480,7 +556,7 @@ namespace CinemaTicketBooking
             lblTotal.Font = new Font("Segoe UI", 15, FontStyle.Bold);
             lblTotal.ForeColor = Color.White;
             lblTotal.AutoSize = true;
-            lblTotal.Location = new Point(25, 23);
+            lblTotal.Location = new Point(25, 13);
             lblTotal.BackColor = Color.Transparent;
             summaryPanel.Controls.Add(lblTotal);
 
@@ -489,7 +565,7 @@ namespace CinemaTicketBooking
             lblPrice.Font = new Font("Segoe UI", 18, FontStyle.Bold);
             lblPrice.ForeColor = AppColors.AccentGold;
             lblPrice.AutoSize = true;
-            lblPrice.Location = new Point(370, 20);
+            lblPrice.Location = new Point(370, 10);
             lblPrice.BackColor = Color.Transparent;
             summaryPanel.Controls.Add(lblPrice);
 
@@ -500,14 +576,30 @@ namespace CinemaTicketBooking
             btnConfirmBooking.Text = "✓ Confirm Booking";
             btnConfirmBooking.Size = new Size(220, 55);
             btnConfirmBooking.Font = new Font("Segoe UI", 13, FontStyle.Bold);
-            btnConfirmBooking.Location = new Point(165, 605);
+            btnConfirmBooking.Location = new Point(165, 650);
             btnConfirmBooking.BorderRadius = 12;
             btnConfirmBooking.IsSelected = true;
             btnConfirmBooking.Click += (s, e) => {
+                // Validate customer name
+                if (string.IsNullOrWhiteSpace(txtCustomerName.Text))
+                {
+                    MessageBox.Show(
+                        "Please enter your name before confirming booking.",
+                        "Name Required",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    txtCustomerName.Focus();
+                    return;
+                }
+
+                customerName = txtCustomerName.Text.Trim();
                 cartDialog.DialogResult = DialogResult.OK;
                 cartDialog.Close();
             };
             cartDialog.Controls.Add(btnConfirmBooking);
+
+            // Adjust dialog height to accommodate new input
+            cartDialog.Size = new Size(550, 760);
 
             // Show dialog
             if (cartDialog.ShowDialog() == DialogResult.OK)
@@ -577,29 +669,19 @@ namespace CinemaTicketBooking
             btnRemove.BorderRadius = 8;
             btnRemove.ForeColor = Color.FromArgb(239, 68, 68);
             btnRemove.Click += (s, e) => {
-                DialogResult result = MessageBox.Show(
-                    $"Remove seat {seatName} from cart?", 
-                    "Remove Seat", 
-                    MessageBoxButtons.YesNo, 
-                    MessageBoxIcon.Question);
-
-                if (result == DialogResult.Yes)
+                myBookedSeats.Remove(seatName);
+                UpdateUI();
+                
+                // Close and reopen cart if empty
+                if (myBookedSeats.Count == 0)
                 {
-                    myBookedSeats.Remove(seatName);
-                    UpdateUI();
-                    
-                    // Close and reopen cart if empty
-                    if (myBookedSeats.Count == 0)
-                    {
-                        parentForm.Close();
-                        MessageBox.Show("Cart is now empty!", "Cart Empty", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    else
-                    {
-                        // Refresh cart dialog
-                        parentForm.Close();
-                        ShowCartDialog();
-                    }
+                    parentForm.Close();
+                }
+                else
+                {
+                    // Refresh cart dialog
+                    parentForm.Close();
+                    ShowCartDialog();
                 }
             };
             item.Controls.Add(btnRemove);
@@ -607,27 +689,62 @@ namespace CinemaTicketBooking
             return item;
         }
 
-        private void BtnConfirmBooking_Click()
+        private async void BtnConfirmBooking_Click()
         {
             if (myBookedSeats.Count > 0)
             {
+                // Book all seats via API - gọi API cho từng ghế một
+                // Mỗi lần gọi sẽ gửi: {"seatId": "A1", "customerName": "John Doe"}
+                List<string> failedSeats = new List<string>();
+                List<string> successSeats = new List<string>();
+
+                foreach (string seatId in myBookedSeats)
+                {
+                    // Gọi API POST /seat/book với body {"seatId": seatId, "customerName": customerName}
+                    bool success = await ApiServiceSeat.BookSeatAsync(seatId, customerName);
+                    if (success)
+                    {
+                        successSeats.Add(seatId);
+                    }
+                    else
+                    {
+                        failedSeats.Add(seatId);
+                    }
+                }
+
                 string seatList = string.Join(", ", myBookedSeats);
                 decimal totalPrice = myBookedSeats.Count * 12.00m;
                 
-                MessageBox.Show(
-                    $"✅ Booking Confirmed!\n\n" +
+                // Show result message
+                string message = $"✅ Booking Confirmed!\n\n" +
+                    $"👤 Customer: {customerName}\n" +
                     $"🎬 Movie ID: {movieId}\n" +
                     $"⏰ Showtime: {showtime}\n" +
                     $"💺 Seats: {seatList}\n" +
                     $"🎫 Quantity: {myBookedSeats.Count} ticket{(myBookedSeats.Count > 1 ? "s" : "")}\n" +
-                    $"💰 Total: ${totalPrice:F2}\n\n" +
-                    $"Thank you for your booking!",
-                    "Booking Successful",
+                    $"💰 Total: ${totalPrice:F2}\n\n";
+
+                if (failedSeats.Count > 0)
+                {
+                    message += $"⚠️ Warning: {failedSeats.Count} seat(s) failed to book: {string.Join(", ", failedSeats)}\n\n";
+                }
+
+                message += $"Thank you for your booking!";
+
+                MessageBox.Show(
+                    message,
+                    failedSeats.Count > 0 ? "Booking Partially Successful" : "Booking Successful",
                     MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
+                    failedSeats.Count > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information
                 );
 
-                this.Close();
+                // Clear selected seats after booking
+                myBookedSeats.Clear();
+                customerName = string.Empty;
+                UpdateUI();
+                
+                // Reload seats to refresh booking status
+                _ = LoadSeatsAsync();
             }
         }
 

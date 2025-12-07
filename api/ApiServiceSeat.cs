@@ -40,20 +40,20 @@ public static class ApiServiceSeat
         }
     }
 
-    public static async Task<bool> BookSeatAsync(string seatNumber, string customerName)
+    public static async Task<bool> BookSeatAsync(string seatId, string customerName)
     {
         try
         {
             var data = new
             {
-                seatNumber = seatNumber,
+                seatId = seatId,
                 customerName = customerName
             };
 
             var json = JsonConvert.SerializeObject(data);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-            var response = await client.PostAsync("/seats/book", content);
+            var response = await client.PostAsync("/seat/book", content);
 
             if (!response.IsSuccessStatusCode)
             {

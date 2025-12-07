@@ -307,7 +307,7 @@ namespace CinemaTicketBooking
                     SeatSelectionForm seatForm = new SeatSelectionForm(selectedMovieId, selectedTime);
                     this.Hide();
                     seatForm.ShowDialog();
-                    this.Close();
+                    this.Show(); // Show lại form thay vì Close
                 }
                 catch (Exception ex)
                 {
