@@ -93,6 +93,7 @@ namespace BullyAlgorithmDemo
                 ForeColor = ColorTranslator.FromHtml("#831843"),
                 Location = new Point(15, 10),
                 AutoSize = true
+
             };
 
             // Seat Map Panel
@@ -100,7 +101,8 @@ namespace BullyAlgorithmDemo
             {
                 Location = new Point(20, 260),
                 Size = new Size(1160, 280),
-                BackColor = ColorTranslator.FromHtml("#F9A8D4")
+                BackColor = ColorTranslator.FromHtml("#F9A8D4"),
+                AutoScroll = true
             };
 
             seatMapLabel = new Label
@@ -126,7 +128,8 @@ namespace BullyAlgorithmDemo
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 ForeColor = ColorTranslator.FromHtml("#831843"),
                 Location = new Point(15, 10),
-                AutoSize = true
+                AutoSize = true,
+
             };
 
             transactionGrid = new DataGridView
@@ -189,9 +192,13 @@ namespace BullyAlgorithmDemo
 
         private void CreateSeatMap()
         {
-            string[] rows = { "A", "B", "C", "D" };
-            int cols = 5;
+            string[] rows = { "A", "B", "C", "D", "E", "F", "G" };
+            int cols = 10;
+
             seatControls = new SeatControl[rows.Length, cols];
+
+            int seatWidth = (seatMapPanel.Width - 70) / cols; // trừ padding
+            int seatHeight = 50;
 
             for (int i = 0; i < rows.Length; i++)
             {
@@ -199,17 +206,21 @@ namespace BullyAlgorithmDemo
                 {
                     string seatName = $"{rows[i]}{j + 1}";
                     bool isOccupied = (i == 0 && j == 1) || (i == 1 && j == 1) ||
-                                    (i == 1 && j == 3) || (i == 2 && j == 2) ||
-                                    (i == 3 && j == 0) || (i == 3 && j == 3);
+                                      (i == 1 && j == 3) || (i == 2 && j == 2) ||
+                                      (i == 3 && j == 0) || (i == 3 && j == 3);
 
-                    seatControls[i, j] = new SeatControl(seatName, isOccupied)
+                    var seat = new SeatControl(seatName, isOccupied)
                     {
-                        Location = new Point(50 + (j * 220), 50 + (i * 55))
+                        Size = new Size(seatWidth, seatHeight),
+                        Location = new Point(20 + j * (seatWidth + 3), 40 + i * (seatHeight + 10)),
                     };
-                    seatMapPanel.Controls.Add(seatControls[i, j]);
+
+                    seatControls[i, j] = seat;
+                    seatMapPanel.Controls.Add(seat);
                 }
             }
         }
+
 
         private void PopulateSampleData()
         {
