@@ -227,14 +227,16 @@ namespace BullyAlgorithmDemo
                 isLoadingFromApi = true;
                 subtitleLabel.Text = "Loading data from server...";
 
-                // Load cả seats và nodes từ API
+                // Load cả seats, nodes và transactions từ API
                 var seatsTask = ApiServiceSeat.GetSeatsAsync();
                 var nodesTask = ApiServiceNode.GetNodesAsync();
+                var transactionsTask = ApiServiceLog.GetTransactionsAsync();
 
-                await Task.WhenAll(seatsTask, nodesTask);
+                await Task.WhenAll(seatsTask, nodesTask, transactionsTask);
 
                 var seats = await seatsTask;
                 var nodes = await nodesTask;
+                var transactions = await transactionsTask;
 
                 // Load node data
                 if (nodes != null && nodes.Count > 0)
@@ -264,6 +266,12 @@ namespace BullyAlgorithmDemo
                     systemActiveButton.BackColor = ColorTranslator.FromHtml("#EF4444");
                     isLoadingFromApi = false;
                 }
+
+                // Load transactions
+                if (transactions != null && transactions.Count > 0)
+                {
+                    UpdateTransactionGridFromApi(transactions);
+                }
             }
             catch (Exception ex)
             {
@@ -283,14 +291,16 @@ namespace BullyAlgorithmDemo
 
             try
             {
-                // Refresh cả seats và nodes
+                // Refresh cả seats, nodes và transactions
                 var seatsTask = ApiServiceSeat.GetSeatsAsync();
                 var nodesTask = ApiServiceNode.GetNodesAsync();
+                var transactionsTask = ApiServiceLog.GetTransactionsAsync();
 
-                await Task.WhenAll(seatsTask, nodesTask);
+                await Task.WhenAll(seatsTask, nodesTask, transactionsTask);
 
                 var seats = await seatsTask;
                 var nodes = await nodesTask;
+                var transactions = await transactionsTask;
 
                 // Update node data
                 if (nodes != null && nodes.Count > 0)
@@ -313,6 +323,12 @@ namespace BullyAlgorithmDemo
                 {
                     systemActiveButton.Text = "⚠️ Server Offline";
                     systemActiveButton.BackColor = ColorTranslator.FromHtml("#EF4444");
+                }
+
+                // Update transactions
+                if (transactions != null && transactions.Count > 0)
+                {
+                    UpdateTransactionGridFromApi(transactions);
                 }
             }
             catch (Exception ex)
@@ -460,6 +476,25 @@ namespace BullyAlgorithmDemo
             }
         }
 
+        private void UpdateTransactionGridFromApi(List<TransactionDto> transactions)
+        {
+            // Clear existing rows
+            transactionGrid.Rows.Clear();
+
+            // Sort by timestamp descending (newest first)
+            var sortedTransactions = transactions.OrderByDescending(t => t.timestamp).ToList();
+
+            foreach (var transaction in sortedTransactions)
+            {
+                string time = transaction.timestamp.ToString("HH:mm:ss");
+                string source = $"Node {transaction.nodeId}";
+                string action = transaction.actionType.ToUpper();
+                string message = transaction.description;
+
+                AddTransactionRow(time, source, action, message);
+            }
+        }
+
         private void AddTransactionRow(string time, string source, string action, string message)
         {
             int rowIndex = transactionGrid.Rows.Add(time, source, action, message);
@@ -474,16 +509,20 @@ namespace BullyAlgorithmDemo
 
             // Style action cell
             DataGridViewCell actionCell = row.Cells[2];
-            switch (action)
+            switch (action.ToUpper())
             {
                 case "HEARTBEAT":
                     actionCell.Style.BackColor = ColorTranslator.FromHtml("#EC4899");
                     break;
                 case "BUY":
+                case "BOOK":
                     actionCell.Style.BackColor = ColorTranslator.FromHtml("#10B981");
                     break;
                 case "LOG":
                     actionCell.Style.BackColor = ColorTranslator.FromHtml("#F59E0B");
+                    break;
+                default:
+                    actionCell.Style.BackColor = ColorTranslator.FromHtml("#6B7280");
                     break;
             }
             actionCell.Style.ForeColor = Color.White;
