@@ -414,13 +414,8 @@ namespace BullyAlgorithmDemo
 
                 if (index >= 0 && index < nodeControls.Length && nodeControls[index] != null)
                 {
-                    // API trả về boolean, không cần convert
-                    bool isAlive = nodeData.isAlive;
                     bool isLeader = nodeData.isLeader;
-
-
-
-                    nodeControls[index].UpdateNode(isAlive, isLeader);
+                    nodeControls[index].UpdateNode(isLeader);
                 }
                 else
                 {
@@ -801,33 +796,15 @@ namespace BullyAlgorithmDemo
             this.BackColor = ColorTranslator.FromHtml("#F0ABFC");
         }
 
-        public void UpdateNode(bool isAlive, bool isLeader)
+        public void UpdateNode(bool isLeader)
         {
-            // Cập nhật trạng thái alive/dead
-            if (isAlive)
-            {
-                stateLabel.Text = "Alive";
-                stateLabel.ForeColor = ColorTranslator.FromHtml("#701A75");
-                killButton.Visible = true;
-                reviveButton.Visible = false;
-                this.BackColor = ColorTranslator.FromHtml("#F0ABFC");
-            }
-            else
-            {
-                stateLabel.Text = "Dead";
-                stateLabel.ForeColor = Color.Red;
-                killButton.Visible = false;
-                reviveButton.Visible = true;
-                this.BackColor = ColorTranslator.FromHtml("#FCA5A5");
-            }
-
             // Cập nhật leader status
             this.isLeader = isLeader;
-            leaderIcon.Visible = isLeader && isAlive; // Chỉ hiển thị vương miện nếu node còn alive
+            leaderIcon.Visible = isLeader;
             roleLabel.Text = isLeader ? "Leader" : "Follower";
 
             // Làm nổi bật vương miện khi là leader
-            if (isLeader && isAlive)
+            if (isLeader)
             {
                 leaderIcon.ForeColor = ColorTranslator.FromHtml("#FCD34D"); // Vàng
                 leaderIcon.Font = new Font("Segoe UI", 16, FontStyle.Bold);
