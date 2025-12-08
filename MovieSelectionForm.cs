@@ -150,7 +150,7 @@ namespace CinemaTicketBooking
             {
                 // Movie Card - COMPACT SIZE
                 RoundedPanel card = new RoundedPanel();
-                card.Size = new Size(260, 490);
+                card.Size = new Size(300, 650);
                 card.Margin = new Padding(8);
                 card.BackColor = AppColors.CardBg;
                 card.BorderRadius = 14;
@@ -159,13 +159,14 @@ namespace CinemaTicketBooking
 
                 // === POSTER IMAGE ===
                 Panel posterContainer = new Panel();
-                posterContainer.Size = new Size(260, 340);
+                posterContainer.Size = new Size(300, 450);
                 posterContainer.Location = new Point(0, 0);
                 posterContainer.BackColor = Color.FromArgb(51, 65, 85);
 
                 PictureBox pbPoster = new PictureBox();
-                pbPoster.Dock = DockStyle.Fill;
-                pbPoster.SizeMode = PictureBoxSizeMode.Zoom;
+                pbPoster.Size = new Size(300, 450);
+                pbPoster.Location = new Point(0, 0);
+                pbPoster.SizeMode = PictureBoxSizeMode.StretchImage;
                 pbPoster.BackColor = Color.Transparent;
                 
                 try 
@@ -200,7 +201,7 @@ namespace CinemaTicketBooking
                 card.Controls.Add(posterContainer);
 
                 // === MOVIE INFO SECTION - SAT POSTER ===
-                int yPos = 348; // Sát poster hơn
+                int yPos = 458; // Sát poster hơn
 
                 // Movie Title
                 Label lblTitle = new Label();
