@@ -18,25 +18,26 @@ public static class ApiServiceSeat
         try
         {
             var response = await client.GetStringAsync("/seat");
-            return JsonConvert.DeserializeObject<List<SeatDto>>(response);
+            var seats = JsonConvert.DeserializeObject<List<SeatDto>>(response);
+            return seats ?? new List<SeatDto>();
         }
         catch (HttpRequestException ex)
         {
-            // Lỗi kết nối mạng, DNS, server unreachable
+            // Lỗi kết nối mạng, DNS, server unreachable - throw để caller biết
             Console.WriteLine("Network error: " + ex.Message);
-            return new List<SeatDto>(); // trả về rỗng
+            throw; // Throw lại exception để caller có thể xử lý
         }
-        catch (TaskCanceledException)
+        catch (TaskCanceledException ex)
         {
-            // Timeout
+            // Timeout - throw để caller biết
             Console.WriteLine("Request timed out.");
-            return new List<SeatDto>();
+            throw new HttpRequestException("Request timed out. Server may be offline.", ex);
         }
         catch (Exception ex)
         {
-            // Lỗi khác
+            // Lỗi khác - throw để caller biết
             Console.WriteLine("Unexpected error: " + ex.Message);
-            return new List<SeatDto>();
+            throw;
         }
     }
 

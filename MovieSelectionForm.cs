@@ -240,7 +240,7 @@ namespace CinemaTicketBooking
                 // === SHOWTIMES BUTTONS ===
                 FlowLayoutPanel flowTimes = new FlowLayoutPanel();
                 flowTimes.Location = new Point(10, yPos);
-                flowTimes.Size = new Size(240, 60);
+                flowTimes.Size = new Size(240, 100);
                 flowTimes.WrapContents = true;
                 flowTimes.BackColor = Color.Transparent;
 

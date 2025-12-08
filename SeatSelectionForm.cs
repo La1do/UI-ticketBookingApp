@@ -17,6 +17,8 @@ namespace CinemaTicketBooking
         private Label lblSelectedInfo = null!;
         private ModernButton btnConfirm = null!;
         private ModernButton btnBack = null!;
+        private ModernButton btnReset = null!;
+        private Button btnStatus = null!;
 
         private int rows = 8;
         private int cols = 10;
@@ -25,6 +27,7 @@ namespace CinemaTicketBooking
         private List<SeatDto> allSeats = new List<SeatDto>();
         private Label lblLoading = null!;
         private string customerName = string.Empty;
+        private bool isLoadingData = false;
 
         public SeatSelectionForm(int movieId, string time)
         {
@@ -64,9 +67,26 @@ namespace CinemaTicketBooking
             lblMovieInfo.Font = new Font("Segoe UI", 12, FontStyle.Regular);
             lblMovieInfo.ForeColor = AppColors.TextSecondary;
             lblMovieInfo.AutoSize = true;
-            lblMovieInfo.Location = new Point(42, 70);
+            lblMovieInfo.Location = new Point(42, 80);
             lblMovieInfo.BackColor = Color.Transparent;
             headerPanel.Controls.Add(lblMovieInfo);
+
+            // Status button (similar to AdminDashboard)
+            btnStatus = new Button();
+            btnStatus.Text = "⏳ Loading...";
+            btnStatus.Size = new Size(180, 40);
+            btnStatus.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            btnStatus.BackColor = Color.FromArgb(245, 158, 11); // Orange/Yellow for loading
+            btnStatus.ForeColor = Color.White;
+            btnStatus.FlatStyle = FlatStyle.Flat;
+            btnStatus.FlatAppearance.BorderSize = 0;
+            btnStatus.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnStatus.Location = new Point(headerPanel.Width - 200, 30);
+            headerPanel.Controls.Add(btnStatus);
+
+            headerPanel.Resize += (s, e) => {
+                btnStatus.Location = new Point(headerPanel.Width - 200, 30);
+            };
 
             // Main content panel
             Panel mainPanel = new Panel();
@@ -77,7 +97,7 @@ namespace CinemaTicketBooking
 
             // Container for centered content
             Panel centerContainer = new Panel();
-            centerContainer.Size = new Size(700, 700);
+            centerContainer.Size = new Size(700, 660);
             centerContainer.BackColor = Color.Transparent;
             centerContainer.Location = new Point((mainPanel.Width - 700) / 2, 20);
             mainPanel.Controls.Add(centerContainer);
@@ -93,13 +113,13 @@ namespace CinemaTicketBooking
             lblScreen.Font = new Font("Segoe UI", 11, FontStyle.Bold);
             lblScreen.AutoSize = true;
             lblScreen.BackColor = Color.Transparent;
-            lblScreen.Location = new Point(315, 10);
+            lblScreen.Location = new Point(315, 30);
             centerContainer.Controls.Add(lblScreen);
 
             // Screen panel
             Panel pnlScreen = new Panel();
             pnlScreen.Size = new Size(600, 60);
-            pnlScreen.Location = new Point(50, 35);
+            pnlScreen.Location = new Point(50, 45);
             pnlScreen.BackColor = Color.Transparent;
             pnlScreen.Paint += PnlScreen_Paint;
             centerContainer.Controls.Add(pnlScreen);
@@ -107,7 +127,7 @@ namespace CinemaTicketBooking
             // Seats grid
             gridSeats = new FlowLayoutPanel();
             gridSeats.Size = new Size(cols * 55 + 20, rows * 55 + 20);
-            gridSeats.Location = new Point((700 - gridSeats.Width) / 2, 130);
+            gridSeats.Location = new Point((700 - gridSeats.Width) / 2, 120);
             gridSeats.BackColor = Color.Transparent;
             centerContainer.Controls.Add(gridSeats);
 
@@ -125,7 +145,7 @@ namespace CinemaTicketBooking
             _ = LoadSeatsAsync();
 
             // Legend
-            int legendY = 130 + gridSeats.Height + 30;
+            int legendY = 100 + gridSeats.Height + 20;
             CreateLegend(centerContainer, (700 - 420) / 2, legendY);
 
             // Selected seat info
@@ -135,7 +155,7 @@ namespace CinemaTicketBooking
             lblSelectedInfo.ForeColor = AppColors.AccentGold;
             lblSelectedInfo.AutoSize = true;
             lblSelectedInfo.BackColor = Color.Transparent;
-            lblSelectedInfo.Location = new Point((700 - 150) / 2, legendY + 70);
+            lblSelectedInfo.Location = new Point((700 - 150) / 2, legendY + 55);
             centerContainer.Controls.Add(lblSelectedInfo);
 
             // Footer Panel
@@ -156,6 +176,24 @@ namespace CinemaTicketBooking
                 this.Close();
             };
             footerPanel.Controls.Add(btnBack);
+
+            // Reset button
+            btnReset = new ModernButton();
+            btnReset.Text = "🔄 Reset";
+            btnReset.Size = new Size(140, 55);
+            btnReset.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+            btnReset.Location = new Point(200, 18);
+            btnReset.BorderRadius = 12;
+            btnReset.Click += async (s, e) => {
+                // Clear selected seats
+                myBookedSeats.Clear();
+                customerName = string.Empty;
+                UpdateUI();
+                
+                // Reload seats from API
+                await LoadSeatsAsync();
+            };
+            footerPanel.Controls.Add(btnReset);
 
             // Cart button (thay Confirm button)
             btnConfirm = new ModernButton();
@@ -216,8 +254,13 @@ namespace CinemaTicketBooking
 
         private async Task LoadSeatsAsync()
         {
+            if (isLoadingData) return;
+            
             try
             {
+                isLoadingData = true;
+                UpdateStatus("⏳ Loading...", Color.FromArgb(245, 158, 11)); // Orange/Yellow
+                
                 // Fetch seats from API
                 allSeats = await ApiServiceSeat.GetSeatsAsync();
                 
@@ -235,15 +278,45 @@ namespace CinemaTicketBooking
 
                 // Generate seats from API data
                 GenerateSeats();
+                
+                // Update status to online
+                int loadedCount = allSeats?.Count ?? 0;
+                UpdateStatus($"🟢 Online ({loadedCount} seats)", Color.FromArgb(16, 185, 129)); // Green
+                isLoadingData = false;
+            }
+            catch (System.Net.Http.HttpRequestException ex)
+            {
+                // Network error - server offline hoặc không kết nối được
+                if (lblLoading != null)
+                {
+                    lblLoading.Text = "Server offline. Using default layout.";
+                    lblLoading.ForeColor = Color.FromArgb(239, 68, 68);
+                }
+                
+                // Update status to offline
+                UpdateStatus("🔴 Offline", Color.FromArgb(239, 68, 68)); // Red
+                
+                // Clear existing seats before generating new ones
+                if (gridSeats != null)
+                {
+                    gridSeats.Controls.Clear();
+                }
+
+                // Generate seats with empty data (all available)
+                GenerateSeats();
+                isLoadingData = false;
             }
             catch (Exception ex)
             {
-                // Show error message
+                // Other errors
                 if (lblLoading != null)
                 {
                     lblLoading.Text = "Error loading seats. Using default layout.";
                     lblLoading.ForeColor = Color.FromArgb(239, 68, 68);
                 }
+                
+                // Update status to offline
+                UpdateStatus("🔴 Offline", Color.FromArgb(239, 68, 68)); // Red
                 
                 MessageBox.Show(
                     $"Failed to load seats from API.\nError: {ex.Message}\n\nUsing default seat layout.",
@@ -259,6 +332,16 @@ namespace CinemaTicketBooking
 
                 // Generate seats with empty data (all available)
                 GenerateSeats();
+                isLoadingData = false;
+            }
+        }
+
+        private void UpdateStatus(string text, Color backgroundColor)
+        {
+            if (btnStatus != null)
+            {
+                btnStatus.Text = text;
+                btnStatus.BackColor = backgroundColor;
             }
         }
 
@@ -744,7 +827,7 @@ namespace CinemaTicketBooking
                 UpdateUI();
                 
                 // Reload seats to refresh booking status
-                _ = LoadSeatsAsync();
+                await LoadSeatsAsync();
             }
         }
 
