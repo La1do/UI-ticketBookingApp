@@ -24,19 +24,16 @@ public static class ApiServiceSeat
         catch (HttpRequestException ex)
         {
             // Lỗi kết nối mạng, DNS, server unreachable - throw để caller biết
-            Console.WriteLine("Network error: " + ex.Message);
             throw; // Throw lại exception để caller có thể xử lý
         }
         catch (TaskCanceledException ex)
         {
             // Timeout - throw để caller biết
-            Console.WriteLine("Request timed out.");
             throw new HttpRequestException("Request timed out. Server may be offline.", ex);
         }
         catch (Exception ex)
         {
             // Lỗi khác - throw để caller biết
-            Console.WriteLine("Unexpected error: " + ex.Message);
             throw;
         }
     }
@@ -55,11 +52,6 @@ public static class ApiServiceSeat
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
             var response = await client.PostAsync("/seat/book", content);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                Console.WriteLine("Server returned error: " + response.StatusCode);
-            }
 
             return response.IsSuccessStatusCode;
         }

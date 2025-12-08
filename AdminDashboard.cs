@@ -16,7 +16,8 @@ namespace BullyAlgorithmDemo
         private Label subtitleLabel = null!;
         private Button systemActiveButton = null!;
         private Button refreshButton = null!;
-
+        private Button electionInfoButton = null!;
+        private bool isDisposing = false;
         private Panel nodePanel = null!;
         private Label nodeStatusLabel = null!;
         private NodeControl[] nodeControls = null!;
@@ -32,6 +33,9 @@ namespace BullyAlgorithmDemo
         private System.Windows.Forms.Timer refreshTimer = null!;
         private bool isLoadingFromApi = false;
         private SocketService? socketService;
+
+        // Lưu election events để truyền vào form khi mở
+        private List<ElectionDto> electionEventsHistory = new List<ElectionDto>();
 
         public AdminDashboard()
         {
@@ -49,7 +53,7 @@ namespace BullyAlgorithmDemo
             // Setup timer để refresh định kỳ (fallback nếu socket không hoạt động, mỗi 2 giây)
             refreshTimer = new System.Windows.Forms.Timer();
             refreshTimer.Interval = 2000; // 2 giây để đảm bảo cập nhật nhanh nếu socket không hoạt động
-            refreshTimer.Tick += async (s, e) => 
+            refreshTimer.Tick += async (s, e) =>
             {
                 // Chỉ refresh nếu socket không kết nối
                 if (socketService == null || !socketService.IsConnected)
@@ -105,6 +109,20 @@ namespace BullyAlgorithmDemo
             };
             systemActiveButton.FlatAppearance.BorderSize = 0;
 
+            electionInfoButton = new Button
+            {
+                Text = "⚡ Election Info",
+                Size = new Size(120, 40),
+                Location = new Point(790, 20),
+                BackColor = ColorTranslator.FromHtml("#8B5CF6"),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            electionInfoButton.FlatAppearance.BorderSize = 0;
+            electionInfoButton.Click += ElectionInfoButton_Click;
+
             refreshButton = new Button
             {
                 Text = "🔄 Refresh",
@@ -113,10 +131,11 @@ namespace BullyAlgorithmDemo
                 BackColor = ColorTranslator.FromHtml("#DB2777"),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10)
+                Font = new Font("Segoe UI", 10),
+                Cursor = Cursors.Hand
             };
             refreshButton.FlatAppearance.BorderSize = 0;
-            refreshButton.Click += async (s, e) => await RefreshData();
+            refreshButton.Click += RefreshButton_Click;
 
             // Node Status Panel
             nodePanel = new Panel
@@ -199,6 +218,7 @@ namespace BullyAlgorithmDemo
         {
             headerPanel.Controls.Add(titleLabel);
             headerPanel.Controls.Add(subtitleLabel);
+            headerPanel.Controls.Add(electionInfoButton);
             headerPanel.Controls.Add(refreshButton);
             headerPanel.Controls.Add(systemActiveButton);
 
@@ -252,13 +272,7 @@ namespace BullyAlgorithmDemo
                 // Load node data
                 if (nodes != null && nodes.Count > 0)
                 {
-                    Console.WriteLine($"Loaded {nodes.Count} nodes from API");
                     UpdateNodesFromApi(nodes);
-                }
-                else
-                {
-                    Console.WriteLine("No nodes data from API, keeping default state");
-                    // Nếu không có dữ liệu từ API, giữ trạng thái mặc định (alive)
                 }
 
                 if (seats != null && seats.Count > 0)
@@ -287,7 +301,6 @@ namespace BullyAlgorithmDemo
             catch (Exception ex)
             {
                 // Lỗi, hiển thị bảng trống
-                Console.WriteLine($"Error loading from API: {ex.Message}");
                 CreateEmptySeatMap();
                 subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Connection Error)";
                 systemActiveButton.Text = "⚠️ Connection Error";
@@ -298,7 +311,9 @@ namespace BullyAlgorithmDemo
 
         private async Task RefreshData()
         {
-            if (isLoadingFromApi) return;
+            // Không check isLoadingFromApi ở đây vì có thể bị stuck
+            // Thay vào đó, chỉ check khi đang load lần đầu
+            Console.WriteLine("[AdminDashboard] RefreshData called");
 
             try
             {
@@ -317,10 +332,6 @@ namespace BullyAlgorithmDemo
                 if (nodes != null && nodes.Count > 0)
                 {
                     UpdateNodesFromApi(nodes);
-                }
-                else
-                {
-                    Console.WriteLine("No nodes data from API during refresh");
                 }
 
                 if (seats != null && seats.Count > 0)
@@ -344,7 +355,6 @@ namespace BullyAlgorithmDemo
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error refreshing data: {ex.Message}");
                 systemActiveButton.Text = "⚠️ Connection Error";
                 systemActiveButton.BackColor = ColorTranslator.FromHtml("#EF4444");
             }
@@ -393,8 +403,6 @@ namespace BullyAlgorithmDemo
         {
             if (nodeControls == null) return;
 
-            Console.WriteLine($"Updating {nodes.Count} nodes...");
-
             foreach (var nodeData in nodes)
             {
                 // Tìm node control tương ứng với node id
@@ -416,10 +424,6 @@ namespace BullyAlgorithmDemo
                 {
                     bool isLeader = nodeData.isLeader;
                     nodeControls[index].UpdateNode(isLeader);
-                }
-                else
-                {
-                    Console.WriteLine($"Warning: Node id {nodeData.id} is out of range (0-{nodeControls.Length - 1})");
                 }
             }
         }
@@ -541,57 +545,136 @@ namespace BullyAlgorithmDemo
         {
             try
             {
-                socketService = new SocketService("http://localhost:3000");
+                socketService = new SocketService("http://localhost:4000");
 
-                // Lắng nghe cập nhật seats
+                // Lắng nghe cập nhật seats với better thread safety
                 socketService.OnSeatsUpdate += (seats) =>
                 {
-                    if (this.InvokeRequired)
+                    if (isDisposing || this.IsDisposed) return;
+
+                    try
                     {
-                        this.Invoke(new Action(() => HandleSeatsUpdate(seats)));
+                        if (this.InvokeRequired)
+                        {
+                            this.BeginInvoke(new Action(() => HandleSeatsUpdate(seats)));
+                        }
+                        else
+                        {
+                            HandleSeatsUpdate(seats);
+                        }
                     }
-                    else
+                    catch (ObjectDisposedException)
                     {
-                        HandleSeatsUpdate(seats);
+                        // Form đã disposed, ignore
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error in OnSeatsUpdate: {ex.Message}");
                     }
                 };
 
-                // Lắng nghe cập nhật nodes
                 socketService.OnNodesUpdate += (nodes) =>
                 {
-                    if (this.InvokeRequired)
+                    if (isDisposing || this.IsDisposed) return;
+
+                    try
                     {
-                        this.Invoke(new Action(() => HandleNodesUpdate(nodes)));
+                        if (this.InvokeRequired)
+                        {
+                            this.BeginInvoke(new Action(() => HandleNodesUpdate(nodes)));
+                        }
+                        else
+                        {
+                            HandleNodesUpdate(nodes);
+                        }
                     }
-                    else
+                    catch (ObjectDisposedException)
                     {
-                        HandleNodesUpdate(nodes);
+                        // Form đã disposed, ignore
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error in OnNodesUpdate: {ex.Message}");
                     }
                 };
 
-                // Lắng nghe cập nhật transactions
                 socketService.OnTransactionsUpdate += (transactions) =>
                 {
-                    if (this.InvokeRequired)
+                    if (isDisposing || this.IsDisposed) return;
+
+                    try
                     {
-                        this.Invoke(new Action(() => HandleTransactionsUpdate(transactions)));
+                        if (this.InvokeRequired)
+                        {
+                            this.BeginInvoke(new Action(() => HandleTransactionsUpdate(transactions)));
+                        }
+                        else
+                        {
+                            HandleTransactionsUpdate(transactions);
+                        }
                     }
-                    else
+                    catch (ObjectDisposedException)
                     {
-                        HandleTransactionsUpdate(transactions);
+                        // Form đã disposed, ignore
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error in OnTransactionsUpdate: {ex.Message}");
                     }
                 };
 
-                // Lắng nghe thay đổi trạng thái kết nối
+                socketService.OnElectionUpdate += (elections) =>
+                {
+                    if (isDisposing || this.IsDisposed) return;
+
+                    if (elections != null && elections.Count > 0)
+                    {
+                        foreach (var election in elections)
+                        {
+                            bool isDuplicate = electionEventsHistory.Any(e =>
+                                e.NodeId == election.NodeId &&
+                                e.EventType == election.EventType &&
+                                Math.Abs((e.Timestamp - election.Timestamp).TotalSeconds) < 2);
+
+                            if (!isDuplicate)
+                            {
+                                electionEventsHistory.Add(election);
+                            }
+                        }
+
+                        if (electionEventsHistory.Count > 100)
+                        {
+                            electionEventsHistory = electionEventsHistory
+                                .OrderByDescending(e => e.Timestamp)
+                                .Take(100)
+                                .OrderBy(e => e.Timestamp)
+                                .ToList();
+                        }
+                    }
+                };
+
                 socketService.OnConnectionStatusChanged += (isConnected) =>
                 {
-                    if (this.InvokeRequired)
+                    if (isDisposing || this.IsDisposed) return;
+
+                    try
                     {
-                        this.Invoke(new Action(() => HandleConnectionStatusChanged(isConnected)));
+                        if (this.InvokeRequired)
+                        {
+                            this.BeginInvoke(new Action(() => HandleConnectionStatusChanged(isConnected)));
+                        }
+                        else
+                        {
+                            HandleConnectionStatusChanged(isConnected);
+                        }
                     }
-                    else
+                    catch (ObjectDisposedException)
                     {
-                        HandleConnectionStatusChanged(isConnected);
+                        // Form đã disposed, ignore
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error in OnConnectionStatusChanged: {ex.Message}");
                     }
                 };
 
@@ -600,24 +683,23 @@ namespace BullyAlgorithmDemo
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error initializing socket service: {ex.Message}");
                 subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Socket Offline - Using Polling)";
+                Console.WriteLine($"Error initializing socket: {ex.Message}");
             }
         }
 
         private void HandleSeatsUpdate(List<SeatDto> seats)
         {
-            Console.WriteLine($"[AdminDashboard] HandleSeatsUpdate called with {seats?.Count ?? 0} seats at {DateTime.Now:HH:mm:ss.fff}");
+            if (isDisposing || this.IsDisposed) return;
+
             if (seats != null && seats.Count > 0)
             {
                 if (seatControls == null)
                 {
-                    // Nếu chưa có seat map, tạo mới
                     CreateSeatMapFromApi(seats);
                 }
                 else
                 {
-                    // Cập nhật seat map hiện có
                     UpdateSeatMapFromApi(seats);
                 }
                 systemActiveButton.Text = "⚡ System Active";
@@ -628,7 +710,8 @@ namespace BullyAlgorithmDemo
 
         private void HandleNodesUpdate(List<NodeDto> nodes)
         {
-            Console.WriteLine($"[AdminDashboard] HandleNodesUpdate called with {nodes?.Count ?? 0} nodes at {DateTime.Now:HH:mm:ss.fff}");
+            if (isDisposing || this.IsDisposed) return;
+
             if (nodes != null && nodes.Count > 0)
             {
                 UpdateNodesFromApi(nodes);
@@ -637,7 +720,8 @@ namespace BullyAlgorithmDemo
 
         private void HandleTransactionsUpdate(List<TransactionDto> transactions)
         {
-            Console.WriteLine($"[AdminDashboard] HandleTransactionsUpdate called with {transactions?.Count ?? 0} transactions at {DateTime.Now:HH:mm:ss.fff}");
+            if (isDisposing || this.IsDisposed) return;
+
             if (transactions != null && transactions.Count > 0)
             {
                 UpdateTransactionGridFromApi(transactions);
@@ -646,7 +730,8 @@ namespace BullyAlgorithmDemo
 
         private void HandleConnectionStatusChanged(bool isConnected)
         {
-            Console.WriteLine($"[AdminDashboard] Connection status changed: {isConnected} at {DateTime.Now:HH:mm:ss.fff}");
+            if (isDisposing || this.IsDisposed) return;
+
             if (isConnected)
             {
                 subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Socket Connected - Real-time Active)";
@@ -661,11 +746,54 @@ namespace BullyAlgorithmDemo
             }
         }
 
+        private void ElectionInfoButton_Click(object? sender, EventArgs e)
+        {
+            // Mở popup election info với socket service và history
+            ElectionInfoForm electionForm = new ElectionInfoForm(socketService, electionEventsHistory);
+            electionForm.ShowDialog(this);
+        }
+
+        private async void RefreshButton_Click(object? sender, EventArgs e)
+        {
+            if (refreshButton == null) return;
+
+            refreshButton.Enabled = false;
+            string originalText = refreshButton.Text;
+            refreshButton.Text = "⏳ Refreshing...";
+
+            try
+            {
+                Console.WriteLine("[AdminDashboard] Refresh button clicked");
+                await RefreshData();
+                Console.WriteLine("[AdminDashboard] Refresh completed");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AdminDashboard] Error in refresh: {ex.Message}");
+                MessageBox.Show($"Error refreshing data: {ex.Message}", "Refresh Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                refreshButton.Enabled = true;
+                refreshButton.Text = originalText;
+            }
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            refreshTimer?.Stop();
-            refreshTimer?.Dispose();
+            isDisposing = true;
+
+            // Stop timer
+            if (refreshTimer != null)
+            {
+                refreshTimer.Stop();
+                refreshTimer.Dispose();
+            }
+
+            // Dispose socket (non-blocking now)
             socketService?.Dispose();
+
             base.OnFormClosing(e);
         }
     }

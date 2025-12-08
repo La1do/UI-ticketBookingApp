@@ -25,19 +25,16 @@ public static class ApiServiceLog
     catch (HttpRequestException ex)
     {
       // Lỗi kết nối mạng, DNS, server unreachable
-      Console.WriteLine("Network error: " + ex.Message);
       return new List<TransactionDto>(); // trả về rỗng
     }
     catch (TaskCanceledException)
     {
       // Timeout
-      Console.WriteLine("Request timed out.");
       return new List<TransactionDto>();
     }
     catch (Exception ex)
     {
       // Lỗi khác
-      Console.WriteLine("Unexpected error: " + ex.Message);
       return new List<TransactionDto>();
     }
   }

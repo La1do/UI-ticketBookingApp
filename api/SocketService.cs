@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using SocketIOClient;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Text.Json;
 
 namespace api
 {
@@ -10,17 +11,19 @@ namespace api
     {
         private SocketIOClient.SocketIO? client;
         private bool isConnected = false;
+        private bool isDisposing = false;
         private string serverUrl;
 
         // Events để notify AdminDashboard
         public event Action<List<SeatDto>>? OnSeatsUpdate;
         public event Action<List<NodeDto>>? OnNodesUpdate;
         public event Action<List<TransactionDto>>? OnTransactionsUpdate;
+        public event Action<List<ElectionDto>>? OnElectionUpdate;
         public event Action<bool>? OnConnectionStatusChanged;
 
-        public SocketService(string url = "http://localhost:3000")
+        public SocketService(string url = "http://localhost:4000")
         {
-            serverUrl = url;
+            serverUrl = url.Replace("ws://", "http://").Replace("wss://", "https://").TrimEnd('/');
         }
 
         public async Task ConnectAsync()
@@ -29,7 +32,7 @@ namespace api
             {
                 if (client != null && isConnected)
                 {
-                    return; // Đã kết nối rồi
+                    return;
                 }
 
                 client = new SocketIOClient.SocketIO(serverUrl, new SocketIOOptions
@@ -40,248 +43,340 @@ namespace api
                     ReconnectionAttempts = 5
                 });
 
-                // Lắng nghe sự kiện kết nối
-                client.OnConnected += (sender, e) =>
-                {
-                    isConnected = true;
-                    OnConnectionStatusChanged?.Invoke(true);
-                    Console.WriteLine("Socket connected");
-                };
-
-                // Lắng nghe sự kiện ngắt kết nối
-                client.OnDisconnected += (sender, e) =>
-                {
-                    isConnected = false;
-                    OnConnectionStatusChanged?.Invoke(false);
-                    Console.WriteLine("Socket disconnected");
-                };
-
-                // Lắng nghe sự kiện lỗi
-                client.OnError += (sender, e) =>
-                {
-                    Console.WriteLine($"Socket error: {e}");
-                };
-
-                // Lắng nghe cập nhật seats
-                client.On("seatUpdate", response =>
-                {
-                    try
-                    {
-                        Console.WriteLine($"[Socket] Received seatUpdate event at {DateTime.Now:HH:mm:ss.fff}");
-                        List<SeatDto>? seats = null;
-                        
-                        // Thử parse theo nhiều cách khác nhau
-                        try
-                        {
-                            seats = response.GetValue<List<SeatDto>>();
-                            Console.WriteLine($"[Socket] Parsed {seats?.Count ?? 0} seats directly");
-                        }
-                        catch
-                        {
-                            try
-                            {
-                                var json = response.GetValue<string>();
-                                seats = JsonConvert.DeserializeObject<List<SeatDto>>(json);
-                                Console.WriteLine($"[Socket] Parsed {seats?.Count ?? 0} seats from JSON string");
-                            }
-                            catch
-                            {
-                                var json = JsonConvert.SerializeObject(response.GetValue<object>());
-                                seats = JsonConvert.DeserializeObject<List<SeatDto>>(json);
-                                Console.WriteLine($"[Socket] Parsed {seats?.Count ?? 0} seats from object serialization");
-                            }
-                        }
-                        
-                        if (seats != null && seats.Count > 0)
-                        {
-                            Console.WriteLine($"[Socket] Invoking OnSeatsUpdate with {seats.Count} seats");
-                            OnSeatsUpdate?.Invoke(seats);
-                        }
-                        else
-                        {
-                            Console.WriteLine("[Socket] Warning: seatUpdate received but no seats parsed");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[Socket] Error parsing seatUpdate: {ex.Message}");
-                        Console.WriteLine($"[Socket] Stack trace: {ex.StackTrace}");
-                    }
-                });
-
-                // Lắng nghe cập nhật nodes
-                client.On("nodeUpdate", response =>
-                {
-                    try
-                    {
-                        Console.WriteLine($"[Socket] Received nodeUpdate event at {DateTime.Now:HH:mm:ss.fff}");
-                        List<NodeDto>? nodes = null;
-                        
-                        // Thử parse theo nhiều cách khác nhau
-                        try
-                        {
-                            nodes = response.GetValue<List<NodeDto>>();
-                            Console.WriteLine($"[Socket] Parsed {nodes?.Count ?? 0} nodes directly");
-                        }
-                        catch
-                        {
-                            try
-                            {
-                                var json = response.GetValue<string>();
-                                nodes = JsonConvert.DeserializeObject<List<NodeDto>>(json);
-                                Console.WriteLine($"[Socket] Parsed {nodes?.Count ?? 0} nodes from JSON string");
-                            }
-                            catch
-                            {
-                                var json = JsonConvert.SerializeObject(response.GetValue<object>());
-                                nodes = JsonConvert.DeserializeObject<List<NodeDto>>(json);
-                                Console.WriteLine($"[Socket] Parsed {nodes?.Count ?? 0} nodes from object serialization");
-                            }
-                        }
-                        
-                        if (nodes != null && nodes.Count > 0)
-                        {
-                            Console.WriteLine($"[Socket] Invoking OnNodesUpdate with {nodes.Count} nodes");
-                            OnNodesUpdate?.Invoke(nodes);
-                        }
-                        else
-                        {
-                            Console.WriteLine("[Socket] Warning: nodeUpdate received but no nodes parsed");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[Socket] Error parsing nodeUpdate: {ex.Message}");
-                    }
-                });
-
-                // Lắng nghe cập nhật transactions
-                client.On("transactionUpdate", response =>
-                {
-                    try
-                    {
-                        Console.WriteLine($"[Socket] Received transactionUpdate event at {DateTime.Now:HH:mm:ss.fff}");
-                        List<TransactionDto>? transactions = null;
-                        
-                        // Thử parse theo nhiều cách khác nhau
-                        try
-                        {
-                            transactions = response.GetValue<List<TransactionDto>>();
-                            Console.WriteLine($"[Socket] Parsed {transactions?.Count ?? 0} transactions directly");
-                        }
-                        catch
-                        {
-                            try
-                            {
-                                var json = response.GetValue<string>();
-                                transactions = JsonConvert.DeserializeObject<List<TransactionDto>>(json);
-                                Console.WriteLine($"[Socket] Parsed {transactions?.Count ?? 0} transactions from JSON string");
-                            }
-                            catch
-                            {
-                                var json = JsonConvert.SerializeObject(response.GetValue<object>());
-                                transactions = JsonConvert.DeserializeObject<List<TransactionDto>>(json);
-                                Console.WriteLine($"[Socket] Parsed {transactions?.Count ?? 0} transactions from object serialization");
-                            }
-                        }
-                        
-                        if (transactions != null && transactions.Count > 0)
-                        {
-                            Console.WriteLine($"[Socket] Invoking OnTransactionsUpdate with {transactions.Count} transactions");
-                            OnTransactionsUpdate?.Invoke(transactions);
-                        }
-                        else
-                        {
-                            Console.WriteLine("[Socket] Warning: transactionUpdate received but no transactions parsed");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[Socket] Error parsing transactionUpdate: {ex.Message}");
-                    }
-                });
-
-                // Lắng nghe cập nhật tổng hợp (có thể server gửi tất cả cùng lúc)
-                client.On("adminUpdate", response =>
-                {
-                    try
-                    {
-                        Console.WriteLine($"[Socket] Received adminUpdate event at {DateTime.Now:HH:mm:ss.fff}");
-                        var json = JsonConvert.SerializeObject(response.GetValue<object>());
-                        var data = JsonConvert.DeserializeObject<dynamic>(json);
-                        
-                        if (data != null)
-                        {
-                            if (data.seats != null)
-                            {
-                                var seatsJson = data.seats.ToString();
-                                var seats = JsonConvert.DeserializeObject<List<SeatDto>>(seatsJson);
-                                if (seats != null && seats.Count > 0)
-                                {
-                                    Console.WriteLine($"[Socket] Invoking OnSeatsUpdate from adminUpdate with {seats.Count} seats");
-                                    OnSeatsUpdate?.Invoke(seats);
-                                }
-                            }
-                            if (data.nodes != null)
-                            {
-                                var nodesJson = data.nodes.ToString();
-                                var nodes = JsonConvert.DeserializeObject<List<NodeDto>>(nodesJson);
-                                if (nodes != null && nodes.Count > 0)
-                                {
-                                    Console.WriteLine($"[Socket] Invoking OnNodesUpdate from adminUpdate with {nodes.Count} nodes");
-                                    OnNodesUpdate?.Invoke(nodes);
-                                }
-                            }
-                            if (data.transactions != null)
-                            {
-                                var transactionsJson = data.transactions.ToString();
-                                var transactions = JsonConvert.DeserializeObject<List<TransactionDto>>(transactionsJson);
-                                if (transactions != null && transactions.Count > 0)
-                                {
-                                    Console.WriteLine($"[Socket] Invoking OnTransactionsUpdate from adminUpdate with {transactions.Count} transactions");
-                                    OnTransactionsUpdate?.Invoke(transactions);
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[Socket] Error parsing adminUpdate: {ex.Message}");
-                    }
-                });
-
-                // Lắng nghe tất cả events để debug
-                client.OnAny((eventName, response) =>
-                {
-                    Console.WriteLine($"[Socket] Received event: {eventName} at {DateTime.Now:HH:mm:ss.fff}");
-                });
+                // Setup event handlers với dispose check
+                SetupEventHandlers();
 
                 await client.ConnectAsync();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error connecting to socket: {ex.Message}");
+                if (!ex.Message.Contains("Cannot connect"))
+                {
+                    Console.WriteLine($"[Socket] Connection error: {ex.Message}");
+                }
                 isConnected = false;
                 OnConnectionStatusChanged?.Invoke(false);
             }
+        }
+
+        private void SetupEventHandlers()
+        {
+            if (client == null) return;
+
+            client.OnConnected += (sender, e) =>
+            {
+                if (isDisposing) return;
+                isConnected = true;
+                OnConnectionStatusChanged?.Invoke(true);
+                Console.WriteLine("[Socket] Connected");
+            };
+
+            client.OnDisconnected += (sender, e) =>
+            {
+                if (isDisposing) return;
+                isConnected = false;
+                OnConnectionStatusChanged?.Invoke(false);
+                Console.WriteLine("[Socket] Disconnected");
+            };
+
+            client.OnError += (sender, e) =>
+            {
+                if (isDisposing) return;
+                Console.WriteLine($"[Socket] Error: {e}");
+            };
+
+            // Seats update
+            client.On("seatUpdate", response =>
+            {
+                if (isDisposing) return;
+                try
+                {
+                    var seats = ParseResponse<List<SeatDto>>(response);
+                    if (seats != null && seats.Count > 0)
+                    {
+                        OnSeatsUpdate?.Invoke(seats);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Socket] Error parsing seatUpdate: {ex.Message}");
+                }
+            });
+
+            // Nodes update
+            client.On("nodeUpdate", response =>
+            {
+                if (isDisposing) return;
+                try
+                {
+                    var nodes = ParseResponse<List<NodeDto>>(response);
+                    if (nodes != null && nodes.Count > 0)
+                    {
+                        OnNodesUpdate?.Invoke(nodes);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Socket] Error parsing nodeUpdate: {ex.Message}");
+                }
+            });
+
+            // Transactions update
+            client.On("transactionUpdate", response =>
+            {
+                if (isDisposing) return;
+                try
+                {
+                    var transactions = ParseResponse<List<TransactionDto>>(response);
+                    if (transactions != null && transactions.Count > 0)
+                    {
+                        OnTransactionsUpdate?.Invoke(transactions);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Socket] Error parsing transactionUpdate: {ex.Message}");
+                }
+            });
+
+            // Admin update (tổng hợp)
+            client.On("adminUpdate", response =>
+            {
+                if (isDisposing) return;
+                try
+                {
+                    var json = JsonConvert.SerializeObject(response.GetValue<object>());
+                    var data = JsonConvert.DeserializeObject<dynamic>(json);
+                    
+                    if (data != null)
+                    {
+                        if (data.seats != null)
+                        {
+                            var seats = JsonConvert.DeserializeObject<List<SeatDto>>(data.seats.ToString());
+                            if (seats != null && seats.Count > 0)
+                            {
+                                OnSeatsUpdate?.Invoke(seats);
+                            }
+                        }
+                        if (data.nodes != null)
+                        {
+                            var nodes = JsonConvert.DeserializeObject<List<NodeDto>>(data.nodes.ToString());
+                            if (nodes != null && nodes.Count > 0)
+                            {
+                                OnNodesUpdate?.Invoke(nodes);
+                            }
+                        }
+                        if (data.transactions != null)
+                        {
+                            var transactions = JsonConvert.DeserializeObject<List<TransactionDto>>(data.transactions.ToString());
+                            if (transactions != null && transactions.Count > 0)
+                            {
+                                OnTransactionsUpdate?.Invoke(transactions);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Socket] Error parsing adminUpdate: {ex.Message}");
+                }
+            });
+
+            // Election events
+            client.On("election", response =>
+            {
+                if (isDisposing) return;
+                try
+                {
+                    var election = ParseElectionEvent(response);
+                    if (election != null && election.NodeId > 0)
+                    {
+                        OnElectionUpdate?.Invoke(new List<ElectionDto> { election });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Socket] Error handling election: {ex.Message}");
+                }
+            });
+
+            // Election update (list)
+            client.On("electionUpdate", response =>
+            {
+                if (isDisposing) return;
+                try
+                {
+                    var elections = ParseResponse<List<ElectionDto>>(response);
+                    if (elections != null && elections.Count > 0)
+                    {
+                        OnElectionUpdate?.Invoke(elections);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Socket] Error parsing electionUpdate: {ex.Message}");
+                }
+            });
+        }
+
+        private T? ParseResponse<T>(SocketIOResponse response) where T : class
+        {
+            try
+            {
+                return response.GetValue<T>();
+            }
+            catch
+            {
+                try
+                {
+                    var json = response.GetValue<string>();
+                    return JsonConvert.DeserializeObject<T>(json);
+                }
+                catch
+                {
+                    var json = JsonConvert.SerializeObject(response.GetValue<object>());
+                    return JsonConvert.DeserializeObject<T>(json);
+                }
+            }
+        }
+
+        private ElectionDto? ParseElectionEvent(SocketIOResponse response)
+        {
+            // Try direct parse
+            try
+            {
+                var election = response.GetValue<ElectionDto>();
+                if (election != null && election.NodeId > 0)
+                    return election;
+            }
+            catch { }
+
+            // Try from JSON string
+            try
+            {
+                var json = response.GetValue<string>();
+                if (!string.IsNullOrEmpty(json))
+                {
+                    var election = JsonConvert.DeserializeObject<ElectionDto>(json);
+                    if (election != null && election.NodeId > 0)
+                        return election;
+                }
+            }
+            catch { }
+
+            // Try from JsonElement
+            try
+            {
+                var jsonElement = response.GetValue<JsonElement>();
+                return ParseElectionFromJsonElement(jsonElement);
+            }
+            catch { }
+
+            // Try from dynamic object
+            try
+            {
+                var json = JsonConvert.SerializeObject(response.GetValue<object>());
+                var data = JsonConvert.DeserializeObject<dynamic>(json);
+                
+                if (data?.nodeId != null)
+                {
+                    return new ElectionDto
+                    {
+                        NodeId = Convert.ToInt32(data.nodeId.ToString()),
+                        EventType = data.type?.ToString() ?? "",
+                        Message = data.message?.ToString() ?? "",
+                        Timestamp = DateTime.Now
+                    };
+                }
+            }
+            catch { }
+
+            return null;
+        }
+
+        private ElectionDto? ParseElectionFromJsonElement(JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                if (element.TryGetProperty("nodeId", out var nodeIdProp))
+                {
+                    return new ElectionDto
+                    {
+                        NodeId = nodeIdProp.GetInt32(),
+                        EventType = element.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "",
+                        Message = element.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "",
+                        Timestamp = DateTime.Now
+                    };
+                }
+            }
+            else if (element.ValueKind == JsonValueKind.Array && element.GetArrayLength() > 0)
+            {
+                return ParseElectionFromJsonElement(element[0]);
+            }
+            return null;
         }
 
         public async Task DisconnectAsync()
         {
-            if (client != null)
+            if (client != null && !isDisposing)
             {
-                await client.DisconnectAsync();
-                isConnected = false;
-                OnConnectionStatusChanged?.Invoke(false);
+                try
+                {
+                    await client.DisconnectAsync();
+                    isConnected = false;
+                }
+                catch
+                {
+                    // Ignore errors during disconnect
+                }
             }
         }
 
-        public bool IsConnected => isConnected;
+        public bool IsConnected => isConnected && !isDisposing;
 
         public void Dispose()
         {
-            DisconnectAsync().Wait();
-            client?.Dispose();
+            if (isDisposing) return;
+            
+            isDisposing = true;
+            isConnected = false;
+
+            // Unsubscribe all events IMMEDIATELY
+            OnSeatsUpdate = null;
+            OnNodesUpdate = null;
+            OnTransactionsUpdate = null;
+            OnElectionUpdate = null;
+            OnConnectionStatusChanged = null;
+
+            // Disconnect asynchronously without blocking
+            if (client != null)
+            {
+                try
+                {
+                    // Fire and forget - không chờ disconnect hoàn thành
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await client.DisconnectAsync();
+                        }
+                        catch { }
+                        finally
+                        {
+                            client?.Dispose();
+                        }
+                    });
+                }
+                catch
+                {
+                    // Nếu Task.Run fail, dispose trực tiếp
+                    try
+                    {
+                        client?.Dispose();
+                    }
+                    catch { }
+                }
+            }
         }
     }
 }
