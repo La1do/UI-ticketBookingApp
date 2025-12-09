@@ -40,23 +40,23 @@ namespace BullyAlgorithmDemo
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.BackColor = Color.FromArgb(15, 23, 42);
+            this.BackColor = Color.FromArgb(248, 250, 252); // Light gray background
 
-            // Header Panel - giảm height để content hiện hết
+            // Header Panel - màu đơn giản
             headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
                 Height = 80,
-                BackColor = Color.Transparent
+                BackColor = Color.FromArgb(59, 130, 246) // Clean blue
             };
 
-            // Title với icon lightning
+            // Title
             titleLabel = new Label
             {
-                Text = "⚡ Leader Election in Progress ⚡",
-                Font = new Font("Segoe UI", 18, FontStyle.Bold),
+                Text = "⚡ Leader Election in Progress",
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = new Point(20, 10),
+                Location = new Point(20, 15),
                 AutoSize = true,
                 BackColor = Color.Transparent
             };
@@ -65,22 +65,22 @@ namespace BullyAlgorithmDemo
             subtitleLabel = new Label
             {
                 Text = "Bully Algorithm - Highest Node ID Wins",
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                ForeColor = Color.FromArgb(148, 163, 184),
-                Location = new Point(20, 42),
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = Color.FromArgb(240, 245, 255),
+                Location = new Point(20, 45),
                 AutoSize = true,
                 BackColor = Color.Transparent
             };
 
-            // Content Panel với gradient background
+            // Content Panel
             contentPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.Transparent,
+                BackColor = Color.FromArgb(248, 250, 252),
                 Padding = new Padding(20, 10, 20, 20)
             };
 
-            // Scrollable panel cho danh sách events
+            // Scrollable panel
             scrollPanel = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -93,7 +93,7 @@ namespace BullyAlgorithmDemo
             {
                 Text = "✕ Close",
                 Size = new Size(100, 30),
-                Location = new Point(480, 5),
+                Location = new Point(480, 25),
                 BackColor = Color.FromArgb(239, 68, 68),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -116,42 +116,14 @@ namespace BullyAlgorithmDemo
             this.Controls.Add(contentPanel);
         }
 
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            
-            // Vẽ gradient background cho form
-            using (LinearGradientBrush brush = new LinearGradientBrush(
-                this.ClientRectangle,
-                Color.FromArgb(139, 92, 246),  // Purple
-                Color.FromArgb(236, 72, 153),   // Pink
-                LinearGradientMode.Vertical))
-            {
-                e.Graphics.FillRectangle(brush, this.ClientRectangle);
-            }
-
-            // Vẽ header panel với gradient
-            Rectangle headerRect = new Rectangle(0, 0, this.Width, headerPanel.Height);
-            using (LinearGradientBrush headerBrush = new LinearGradientBrush(
-                headerRect,
-                Color.FromArgb(100, 139, 92, 246),
-                Color.FromArgb(100, 236, 72, 153),
-                LinearGradientMode.Horizontal))
-            {
-                e.Graphics.FillRectangle(headerBrush, headerRect);
-            }
-        }
-
         private void LoadElectionData(List<ElectionDto>? initialHistory = null)
         {
             electionEvents = new List<ElectionEvent>();
-            
-            // Đảm bảo scrollPanel đã được khởi tạo
+
             if (scrollPanel == null) return;
-            
+
             scrollPanel.Controls.Clear();
-            
-            // Nếu có initial history, load vào
+
             if (initialHistory != null && initialHistory.Count > 0)
             {
                 foreach (var dto in initialHistory)
@@ -159,21 +131,17 @@ namespace BullyAlgorithmDemo
                     var evt = ConvertToElectionEvent(dto);
                     electionEvents.Add(evt);
                 }
-                
-                // Sắp xếp theo thời gian
+
                 electionEvents = electionEvents.OrderBy(e => e.Timestamp).ToList();
-                
-                // Render ngay
                 RenderElectionEvents();
-                
-                // Hiển thị thông báo nếu có socket
+
                 if (socketService != null && socketService.IsConnected)
                 {
                     Label statusLabel = new Label
                     {
                         Text = $"✅ Connected - Showing {electionEvents.Count} events (real-time updates active)",
                         Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                        ForeColor = Color.FromArgb(16, 185, 129),
+                        ForeColor = Color.FromArgb(22, 163, 74),
                         AutoSize = true,
                         Location = new Point(30, 10),
                         BackColor = Color.Transparent
@@ -183,22 +151,20 @@ namespace BullyAlgorithmDemo
             }
             else
             {
-                // Không có history, hiển thị message đang chờ
                 Label waitingLabel = new Label
                 {
                     Text = "⏳ Waiting for election events from socket...",
-                    Font = new Font("Segoe UI", 14, FontStyle.Regular),
-                    ForeColor = Color.White,
+                    Font = new Font("Segoe UI", 12, FontStyle.Regular),
+                    ForeColor = Color.FromArgb(100, 116, 139),
                     AutoSize = true,
                     Location = new Point(30, 50),
                     BackColor = Color.Transparent
                 };
-                
-                // Nếu có socket service và đã kết nối, hiển thị thông báo khác
+
                 if (socketService != null && socketService.IsConnected)
                 {
                     waitingLabel.Text = "✅ Connected to socket. Waiting for election events...";
-                    waitingLabel.ForeColor = Color.FromArgb(16, 185, 129);
+                    waitingLabel.ForeColor = Color.FromArgb(22, 163, 74);
                 }
                 else if (socketService != null && !socketService.IsConnected)
                 {
@@ -210,7 +176,7 @@ namespace BullyAlgorithmDemo
                     waitingLabel.Text = "⚠️ Socket service not available. Cannot receive election events.";
                     waitingLabel.ForeColor = Color.FromArgb(239, 68, 68);
                 }
-                
+
                 scrollPanel.Controls.Add(waitingLabel);
             }
         }
@@ -218,8 +184,7 @@ namespace BullyAlgorithmDemo
         private ElectionEvent ConvertToElectionEvent(ElectionDto dto)
         {
             ElectionEventType eventType = ElectionEventType.Participating;
-            
-            // Parse eventType từ string (backend gửi: CANDIDATE, ELECTION, VICTORY)
+
             if (dto.EventType != null)
             {
                 string eventTypeStr = dto.EventType.ToUpper();
@@ -275,23 +240,21 @@ namespace BullyAlgorithmDemo
         private void HandleElectionUpdate(List<ElectionDto> elections)
         {
             Console.WriteLine($"[ElectionInfoForm] HandleElectionUpdate called with {elections?.Count ?? 0} events");
-            
+
             if (elections != null && elections.Count > 0)
             {
-                // Thêm events mới vào history (không thay thế toàn bộ)
                 foreach (var dto in elections)
                 {
                     Console.WriteLine($"[ElectionInfoForm] Processing: Node {dto.NodeId}, Type: {dto.EventType}, Message: {dto.Message}");
-                    
+
                     var newEvent = ConvertToElectionEvent(dto);
                     Console.WriteLine($"[ElectionInfoForm] Converted to: Node {newEvent.NodeId}, Type: {newEvent.EventType}");
-                    
-                    // Tránh duplicate - check xem đã có event tương tự chưa
-                    bool isDuplicate = electionEvents.Any(e => 
-                        e.NodeId == newEvent.NodeId && 
-                        e.EventType == newEvent.EventType && 
-                        Math.Abs((e.Timestamp - newEvent.Timestamp).TotalSeconds) < 2); // Trong vòng 2 giây
-                    
+
+                    bool isDuplicate = electionEvents.Any(e =>
+                        e.NodeId == newEvent.NodeId &&
+                        e.EventType == newEvent.EventType &&
+                        Math.Abs((e.Timestamp - newEvent.Timestamp).TotalSeconds) < 2);
+
                     if (!isDuplicate)
                     {
                         electionEvents.Add(newEvent);
@@ -302,8 +265,7 @@ namespace BullyAlgorithmDemo
                         Console.WriteLine($"[ElectionInfoForm] Duplicate event skipped");
                     }
                 }
-                
-                // Giới hạn số lượng events trong history
+
                 if (electionEvents.Count > MAX_HISTORY)
                 {
                     electionEvents = electionEvents
@@ -312,10 +274,9 @@ namespace BullyAlgorithmDemo
                         .OrderBy(e => e.Timestamp)
                         .ToList();
                 }
-                
-                // Sắp xếp theo thời gian
+
                 electionEvents = electionEvents.OrderBy(e => e.Timestamp).ToList();
-                
+
                 Console.WriteLine($"[ElectionInfoForm] Rendering {electionEvents.Count} events");
                 RenderElectionEvents();
             }
@@ -334,7 +295,7 @@ namespace BullyAlgorithmDemo
         private void RenderElectionEvents()
         {
             if (scrollPanel == null) return;
-            
+
             scrollPanel.Controls.Clear();
             Console.WriteLine($"[ElectionInfoForm] RenderElectionEvents: {electionEvents?.Count ?? 0} events");
 
@@ -344,7 +305,7 @@ namespace BullyAlgorithmDemo
                 {
                     Text = "No election events available",
                     Font = new Font("Segoe UI", 12),
-                    ForeColor = Color.FromArgb(148, 163, 184),
+                    ForeColor = Color.FromArgb(100, 116, 139),
                     AutoSize = true,
                     Location = new Point(20, 20),
                     BackColor = Color.Transparent
@@ -354,7 +315,7 @@ namespace BullyAlgorithmDemo
             }
 
             int yPos = 80;
-            int cardWidth = scrollPanel.Width - 40; // Trừ padding và scrollbar
+            int cardWidth = scrollPanel.Width - 40;
 
             foreach (var evt in electionEvents)
             {
@@ -364,18 +325,22 @@ namespace BullyAlgorithmDemo
                 scrollPanel.Controls.Add(eventCard);
                 yPos += eventCard.Height + 10;
             }
-            
+
             Console.WriteLine($"[ElectionInfoForm] Rendered {electionEvents.Count} cards");
         }
 
         private RoundedPanel CreateEventCard(ElectionEvent evt, int width)
         {
+            // Màu nền của card dựa trên loại event - nổi bật hơn
+            Color cardBackColor = GetCardBackgroundColor(evt.EventType);
+            Color borderColor = GetCardBorderColor(evt.EventType);
+
             RoundedPanel card = new RoundedPanel
             {
                 Size = new Size(width, 70),
-                BackColor = Color.FromArgb(60, 139, 92, 246), // Semi-transparent purple
-                BorderRadius = 12,
-                BorderColor = Color.FromArgb(80, 255, 255, 255),
+                BackColor = cardBackColor,
+                BorderRadius = 8,
+                BorderColor = borderColor,
                 EnableHoverEffect = false
             };
 
@@ -384,54 +349,104 @@ namespace BullyAlgorithmDemo
             {
                 Text = GetEventIcon(evt.EventType),
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                ForeColor = GetEventColor(evt.EventType),
+                ForeColor = GetEventIconColor(evt.EventType),
                 Location = new Point(20, 20),
                 AutoSize = true,
                 BackColor = Color.Transparent
             };
 
-            // Node name - dịch sang phải để hiện rõ hơn
+            // Node name
             Label nodeLabel = new Label
             {
                 Text = $"Node {evt.NodeId}",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = Color.White,
+                ForeColor = GetTextColor(evt.EventType),
                 Location = new Point(70, 15),
                 AutoSize = true,
                 BackColor = Color.Transparent
             };
 
-            // Message - dịch sang phải để hiện rõ hơn
+            // Message
             Label messageLabel = new Label
             {
                 Text = evt.Message,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                ForeColor = Color.FromArgb(220, 220, 220),
+                ForeColor = GetSecondaryTextColor(evt.EventType),
                 Location = new Point(70, 38),
                 Size = new Size(width - 90, 25),
                 BackColor = Color.Transparent
             };
-
-            // Checkmark icon cho candidate
-            if (evt.EventType == ElectionEventType.Candidate)
-            {
-                Label checkIcon = new Label
-                {
-                    Text = "✓",
-                    Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                    ForeColor = Color.FromArgb(16, 185, 129), // Green
-                    Location = new Point(width - 35, 10),
-                    AutoSize = true,
-                    BackColor = Color.Transparent
-                };
-                card.Controls.Add(checkIcon);
-            }
 
             card.Controls.Add(iconLabel);
             card.Controls.Add(nodeLabel);
             card.Controls.Add(messageLabel);
 
             return card;
+        }
+
+        // Màu nền card dựa trên event type - nổi bật hơn
+        private Color GetCardBackgroundColor(ElectionEventType eventType)
+        {
+            return eventType switch
+            {
+                ElectionEventType.Candidate => Color.FromArgb(254, 249, 195),    // Light yellow
+                ElectionEventType.SentElection => Color.FromArgb(219, 234, 254), // Light blue
+                ElectionEventType.Winner => Color.FromArgb(220, 252, 231),       // Light green
+                ElectionEventType.Participating => Color.FromArgb(241, 245, 249), // Light gray
+                _ => Color.White
+            };
+        }
+
+        // Màu border card
+        private Color GetCardBorderColor(ElectionEventType eventType)
+        {
+            return eventType switch
+            {
+                ElectionEventType.Candidate => Color.FromArgb(234, 179, 8),     // Dark yellow
+                ElectionEventType.SentElection => Color.FromArgb(59, 130, 246), // Blue
+                ElectionEventType.Winner => Color.FromArgb(22, 163, 74),        // Green
+                ElectionEventType.Participating => Color.FromArgb(203, 213, 225), // Gray
+                _ => Color.LightGray
+            };
+        }
+
+        // Màu text chính
+        private Color GetTextColor(ElectionEventType eventType)
+        {
+            return eventType switch
+            {
+                ElectionEventType.Candidate => Color.FromArgb(133, 77, 14),     // Dark yellow-brown
+                ElectionEventType.SentElection => Color.FromArgb(30, 64, 175),  // Dark blue
+                ElectionEventType.Winner => Color.FromArgb(21, 128, 61),        // Dark green
+                ElectionEventType.Participating => Color.FromArgb(51, 65, 85),  // Dark gray
+                _ => Color.Black
+            };
+        }
+
+        // Màu text phụ (message)
+        private Color GetSecondaryTextColor(ElectionEventType eventType)
+        {
+            return eventType switch
+            {
+                ElectionEventType.Candidate => Color.FromArgb(161, 98, 7),      // Medium yellow-brown
+                ElectionEventType.SentElection => Color.FromArgb(37, 99, 235),  // Medium blue
+                ElectionEventType.Winner => Color.FromArgb(22, 163, 74),        // Medium green
+                ElectionEventType.Participating => Color.FromArgb(71, 85, 105), // Medium gray
+                _ => Color.Gray
+            };
+        }
+
+        // Màu icon
+        private Color GetEventIconColor(ElectionEventType eventType)
+        {
+            return eventType switch
+            {
+                ElectionEventType.Candidate => Color.FromArgb(234, 179, 8),     // Gold
+                ElectionEventType.SentElection => Color.FromArgb(59, 130, 246), // Blue
+                ElectionEventType.Winner => Color.FromArgb(22, 163, 74),        // Green
+                ElectionEventType.Participating => Color.FromArgb(100, 116, 139), // Gray
+                _ => Color.Black
+            };
         }
 
         private string GetEventIcon(ElectionEventType eventType)
@@ -446,35 +461,21 @@ namespace BullyAlgorithmDemo
             };
         }
 
-        private Color GetEventColor(ElectionEventType eventType)
-        {
-            return eventType switch
-            {
-                ElectionEventType.Candidate => Color.FromArgb(251, 191, 36), // Gold
-                ElectionEventType.SentElection => Color.FromArgb(251, 191, 36), // Gold/Yellow
-                ElectionEventType.Winner => Color.FromArgb(16, 185, 129), // Green
-                ElectionEventType.Participating => Color.FromArgb(148, 163, 184), // Gray
-                _ => Color.White
-            };
-        }
-
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
             if (scrollPanel != null && electionEvents != null && electionEvents.Count > 0)
             {
-                // Cập nhật lại width của các cards khi resize
                 int cardWidth = scrollPanel.Width - 40;
                 foreach (Control control in scrollPanel.Controls)
                 {
                     if (control is RoundedPanel card)
                     {
                         card.Width = cardWidth;
-                        // Cập nhật lại width của message label
                         foreach (Control child in card.Controls)
                         {
-                            if (child is Label label && 
-                                (label.Text.Contains("sends") || label.Text.Contains("participates") || 
+                            if (child is Label label &&
+                                (label.Text.Contains("sends") || label.Text.Contains("participates") ||
                                  label.Text.Contains("wins") || label.Text.Contains("candidate")))
                             {
                                 label.Width = cardWidth - 90;
@@ -487,17 +488,10 @@ namespace BullyAlgorithmDemo
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            // Unsubscribe từ socket service khi form đóng
-            if (socketService != null)
-            {
-                // Note: SocketService không có cách unsubscribe riêng, 
-                // nhưng form sẽ được dispose nên không sao
-            }
             base.OnFormClosing(e);
         }
     }
 
-    // Class để lưu thông tin election event
     public class ElectionEvent
     {
         public int NodeId { get; set; }
@@ -508,9 +502,9 @@ namespace BullyAlgorithmDemo
 
     public enum ElectionEventType
     {
-        Candidate,      // Node là candidate cho leadership
-        SentElection,   // Node gửi election message
-        Winner,         // Node chiến thắng
-        Participating    // Node tham gia (không làm gì)
+        Candidate,
+        SentElection,
+        Winner,
+        Participating
     }
 }
