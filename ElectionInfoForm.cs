@@ -85,7 +85,8 @@ namespace BullyAlgorithmDemo
             {
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
-                BackColor = Color.Transparent
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 5, 0, 0) // Thêm padding top để tránh bị header che
             };
 
             // Close button
@@ -314,19 +315,110 @@ namespace BullyAlgorithmDemo
                 return;
             }
 
-            int yPos = 80;
+            int yPos = 100; // Bắt đầu từ 30 để tránh bị header che mất các message đầu
             int cardWidth = scrollPanel.Width - 40;
+            const double BATCH_TIME_THRESHOLD_SECONDS = 3.0; // Nếu cách nhau > 3 giây thì là đợt mới
 
-            foreach (var evt in electionEvents)
+            // Nhóm events thành các batch dựa trên thời gian
+            List<List<ElectionEvent>> batches = new List<List<ElectionEvent>>();
+            List<ElectionEvent> currentBatch = new List<ElectionEvent>();
+
+            for (int i = 0; i < electionEvents.Count; i++)
             {
-                Console.WriteLine($"[ElectionInfoForm] Creating card for: Node {evt.NodeId}, Type: {evt.EventType}");
-                RoundedPanel eventCard = CreateEventCard(evt, cardWidth);
-                eventCard.Location = new Point(10, yPos);
-                scrollPanel.Controls.Add(eventCard);
-                yPos += eventCard.Height + 10;
+                var evt = electionEvents[i];
+                
+                if (currentBatch.Count == 0)
+                {
+                    // Batch đầu tiên
+                    currentBatch.Add(evt);
+                }
+                else
+                {
+                    // Kiểm tra khoảng thời gian với event trước đó
+                    var previousEvent = electionEvents[i - 1];
+                    double timeDiff = Math.Abs((evt.Timestamp - previousEvent.Timestamp).TotalSeconds);
+                    
+                    if (timeDiff > BATCH_TIME_THRESHOLD_SECONDS)
+                    {
+                        // Tạo batch mới
+                        batches.Add(currentBatch);
+                        currentBatch = new List<ElectionEvent> { evt };
+                    }
+                    else
+                    {
+                        // Cùng batch
+                        currentBatch.Add(evt);
+                    }
+                }
             }
 
-            Console.WriteLine($"[ElectionInfoForm] Rendered {electionEvents.Count} cards");
+            // Thêm batch cuối cùng
+            if (currentBatch.Count > 0)
+            {
+                batches.Add(currentBatch);
+            }
+
+            // Render từng batch với divider
+            for (int batchIndex = 0; batchIndex < batches.Count; batchIndex++)
+            {
+                var batch = batches[batchIndex];
+                
+                // Thêm divider trước mỗi batch (trừ batch đầu tiên)
+                if (batchIndex > 0)
+                {
+                    Panel divider = CreateBatchDivider(batch[0].Timestamp, cardWidth, batch.Count);
+                    divider.Location = new Point(10, yPos);
+                    scrollPanel.Controls.Add(divider);
+                    yPos += divider.Height + 10;
+                }
+                else
+                {
+                    // Thêm divider cho batch đầu tiên nếu có nhiều hơn 1 batch
+                    if (batches.Count > 1)
+                    {
+                        Panel divider = CreateBatchDivider(batch[0].Timestamp, cardWidth, batch.Count);
+                        divider.Location = new Point(10, yPos);
+                        scrollPanel.Controls.Add(divider);
+                        yPos += divider.Height + 10;
+                    }
+                }
+
+                // Render các events trong batch
+                foreach (var evt in batch)
+                {
+                    Console.WriteLine($"[ElectionInfoForm] Creating card for: Node {evt.NodeId}, Type: {evt.EventType}");
+                    RoundedPanel eventCard = CreateEventCard(evt, cardWidth);
+                    eventCard.Location = new Point(10, yPos);
+                    scrollPanel.Controls.Add(eventCard);
+                    yPos += eventCard.Height + 10;
+                }
+            }
+
+            Console.WriteLine($"[ElectionInfoForm] Rendered {electionEvents.Count} cards in {batches.Count} batches");
+        }
+
+        private Panel CreateBatchDivider(DateTime batchTime, int width, int eventCount = 0)
+        {
+            Panel divider = new Panel
+            {
+                Size = new Size(width, 30),
+                BackColor = Color.Transparent
+            };
+
+            // Label chỉ hiển thị time
+            Label timeLabel = new Label
+            {
+                Text = batchTime.ToString("HH:mm:ss.fff"),
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                AutoSize = true,
+                Location = new Point(10, 5),
+                BackColor = Color.Transparent
+            };
+
+            divider.Controls.Add(timeLabel);
+
+            return divider;
         }
 
         private RoundedPanel CreateEventCard(ElectionEvent evt, int width)

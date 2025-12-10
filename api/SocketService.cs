@@ -13,6 +13,8 @@ namespace api
         private bool isConnected = false;
         private bool isDisposing = false;
         private string serverUrl;
+        private int reconnectAttemptCount = 0;
+        private const int maxReconnectAttempts = 5;
 
         // Events để notify AdminDashboard
         public event Action<List<SeatDto>>? OnSeatsUpdate;
@@ -24,6 +26,7 @@ namespace api
         public SocketService(string url = "http://10.15.240.149:4000")
         {
             serverUrl = url.Replace("ws://", "http://").Replace("wss://", "https://").TrimEnd('/');
+            Console.WriteLine($"[Socket] SocketService initialized with URL: {serverUrl}");
         }
 
         public async Task ConnectAsync()
@@ -32,28 +35,44 @@ namespace api
             {
                 if (client != null && isConnected)
                 {
+                    Console.WriteLine($"[Socket] Already connected to {serverUrl}");
                     return;
                 }
+
+                Console.WriteLine($"[Socket] 🔌 Attempting to connect to {serverUrl}...");
+                Console.WriteLine($"[Socket] Connection URL: {serverUrl}");
 
                 client = new SocketIOClient.SocketIO(serverUrl, new SocketIOOptions
                 {
                     Reconnection = true,
                     ReconnectionDelay = 1000,
                     ReconnectionDelayMax = 5000,
-                    ReconnectionAttempts = 5
+                    ReconnectionAttempts = 1
                 });
+                
+                Console.WriteLine($"[Socket] Reconnection settings:");
+                Console.WriteLine($"[Socket]   - Enabled: true");
+                Console.WriteLine($"[Socket]   - Max attempts: 1");
+                Console.WriteLine($"[Socket]   - Delay: 1000ms - 5000ms");
 
                 // Setup event handlers với dispose check
                 SetupEventHandlers();
 
+                Console.WriteLine($"[Socket] Starting connection process...");
                 await client.ConnectAsync();
             }
             catch (Exception ex)
             {
-                if (!ex.Message.Contains("Cannot connect"))
+                // Log tất cả lỗi kết nối, bao gồm cả "Cannot connect"
+                Console.WriteLine($"[Socket] ❌ FAILED to connect to {serverUrl}");
+                Console.WriteLine($"[Socket] Error Type: {ex.GetType().Name}");
+                Console.WriteLine($"[Socket] Error Message: {ex.Message}");
+                if (ex.InnerException != null)
                 {
-                    Console.WriteLine($"[Socket] Connection error: {ex.Message}");
+                    Console.WriteLine($"[Socket] Inner Exception: {ex.InnerException.GetType().Name} - {ex.InnerException.Message}");
                 }
+                Console.WriteLine($"[Socket] Stack Trace: {ex.StackTrace}");
+                Console.WriteLine($"[Socket] ⚠️ Will attempt to reconnect automatically...");
                 isConnected = false;
                 OnConnectionStatusChanged?.Invoke(false);
             }
@@ -68,7 +87,9 @@ namespace api
                 if (isDisposing) return;
                 isConnected = true;
                 OnConnectionStatusChanged?.Invoke(true);
-                Console.WriteLine("[Socket] Connected");
+                reconnectAttemptCount = 0; // Reset counter khi connect thành công
+                Console.WriteLine($"[Socket] ✅ Successfully connected to {serverUrl}");
+                Console.WriteLine($"[Socket] Connected at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             };
 
             client.OnDisconnected += (sender, e) =>
@@ -76,13 +97,37 @@ namespace api
                 if (isDisposing) return;
                 isConnected = false;
                 OnConnectionStatusChanged?.Invoke(false);
-                Console.WriteLine("[Socket] Disconnected");
+                reconnectAttemptCount++;
+                Console.WriteLine($"[Socket] ⚠️ DISCONNECTED from {serverUrl}");
+                Console.WriteLine($"[Socket] Disconnect Reason: {e}");
+                Console.WriteLine($"[Socket] 🔄 Reconnection will be attempted automatically...");
+                Console.WriteLine($"[Socket] Reconnection attempt count: {reconnectAttemptCount}/{maxReconnectAttempts}");
+                Console.WriteLine($"[Socket] Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                
+                if (reconnectAttemptCount >= maxReconnectAttempts)
+                {
+                    Console.WriteLine($"[Socket] ⚠️ WARNING: Maximum reconnection attempts ({maxReconnectAttempts}) reached!");
+                    Console.WriteLine($"[Socket] ⚠️ Will stop trying to reconnect.");
+                }
             };
 
             client.OnError += (sender, e) =>
             {
                 if (isDisposing) return;
-                Console.WriteLine($"[Socket] Error: {e}");
+                Console.WriteLine($"[Socket] ❌ ERROR occurred: {e}");
+                Console.WriteLine($"[Socket] Error details: {e?.ToString() ?? "Unknown error"}");
+            };
+
+            // Event khi reconnect thành công
+            client.OnReconnected += (sender, e) =>
+            {
+                if (isDisposing) return;
+                isConnected = true;
+                OnConnectionStatusChanged?.Invoke(true);
+                Console.WriteLine($"[Socket] ✅ RECONNECTED successfully to {serverUrl}");
+                Console.WriteLine($"[Socket] Total reconnection attempts before success: {reconnectAttemptCount}");
+                Console.WriteLine($"[Socket] Reconnected at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                reconnectAttemptCount = 0; // Reset counter sau khi reconnect thành công
             };
 
             // Seats update
@@ -152,26 +197,38 @@ namespace api
                     {
                         if (data.seats != null)
                         {
-                            var seats = JsonConvert.DeserializeObject<List<SeatDto>>(data.seats.ToString());
-                            if (seats != null && seats.Count > 0)
+                            var seatsJson = data.seats.ToString();
+                            if (!string.IsNullOrEmpty(seatsJson))
                             {
-                                OnSeatsUpdate?.Invoke(seats);
+                                var seats = JsonConvert.DeserializeObject<List<SeatDto>>(seatsJson);
+                                if (seats != null && seats.Count > 0)
+                                {
+                                    OnSeatsUpdate?.Invoke(seats);
+                                }
                             }
                         }
                         if (data.nodes != null)
                         {
-                            var nodes = JsonConvert.DeserializeObject<List<NodeDto>>(data.nodes.ToString());
-                            if (nodes != null && nodes.Count > 0)
+                            var nodesJson = data.nodes.ToString();
+                            if (!string.IsNullOrEmpty(nodesJson))
                             {
-                                OnNodesUpdate?.Invoke(nodes);
+                                var nodes = JsonConvert.DeserializeObject<List<NodeDto>>(nodesJson);
+                                if (nodes != null && nodes.Count > 0)
+                                {
+                                    OnNodesUpdate?.Invoke(nodes);
+                                }
                             }
                         }
                         if (data.transactions != null)
                         {
-                            var transactions = JsonConvert.DeserializeObject<List<TransactionDto>>(data.transactions.ToString());
-                            if (transactions != null && transactions.Count > 0)
+                            var transactionsJson = data.transactions.ToString();
+                            if (!string.IsNullOrEmpty(transactionsJson))
                             {
-                                OnTransactionsUpdate?.Invoke(transactions);
+                                var transactions = JsonConvert.DeserializeObject<List<TransactionDto>>(transactionsJson);
+                                if (transactions != null && transactions.Count > 0)
+                                {
+                                    OnTransactionsUpdate?.Invoke(transactions);
+                                }
                             }
                         }
                     }

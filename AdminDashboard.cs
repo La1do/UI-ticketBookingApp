@@ -142,7 +142,7 @@ namespace BullyAlgorithmDemo
             {
                 Location = new Point(20, 90),
                 Size = new Size(1160, 160),
-                BackColor = ColorTranslator.FromHtml("#F9A8D4")
+                BackColor = ColorTranslator.FromHtml("#ffffffff")
             };
 
             nodeStatusLabel = new Label
@@ -545,7 +545,8 @@ namespace BullyAlgorithmDemo
         {
             try
             {
-                socketService = new SocketService("http://localhost:4000");
+                // Sử dụng default URL từ constructor hoặc có thể config từ file
+                socketService = new SocketService();
 
                 // Lắng nghe cập nhật seats với better thread safety
                 socketService.OnSeatsUpdate += (seats) =>
@@ -804,8 +805,6 @@ namespace BullyAlgorithmDemo
         private Label statusLabel = null!;
         private Label stateLabel = null!;
         private Label roleLabel = null!;
-        private Button killButton = null!;
-        private Button reviveButton = null!;
         private Label leaderIcon = null!;
 
         private int nodeNumber;
@@ -817,7 +816,7 @@ namespace BullyAlgorithmDemo
             isLeader = leader;
 
             this.Size = new Size(180, 110);
-            this.BackColor = ColorTranslator.FromHtml("#F0ABFC");
+            this.BackColor = ColorTranslator.FromHtml("#000080"); // Navy blue background
 
             InitializeNodeComponents();
         }
@@ -828,7 +827,7 @@ namespace BullyAlgorithmDemo
             {
                 Text = $"● Node {nodeNumber}",
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                ForeColor = ColorTranslator.FromHtml("#701A75"),
+                ForeColor = Color.White, // Màu trắng để thấy rõ trên nền xanh đậm
                 Location = new Point(10, 8),
                 AutoSize = true
             };
@@ -840,14 +839,14 @@ namespace BullyAlgorithmDemo
                 Location = new Point(145, 3),
                 AutoSize = true,
                 Visible = isLeader,
-                ForeColor = ColorTranslator.FromHtml("#FCD34D")
+                ForeColor = ColorTranslator.FromHtml("#fffb04ff")
             };
 
             statusLabel = new Label
             {
                 Text = "Status",
                 Font = new Font("Segoe UI", 8),
-                ForeColor = ColorTranslator.FromHtml("#701A75"),
+                ForeColor = Color.FromArgb(220, 220, 220), // Màu xám sáng để thấy rõ
                 Location = new Point(10, 30),
                 AutoSize = true
             };
@@ -856,7 +855,7 @@ namespace BullyAlgorithmDemo
             {
                 Text = "Alive",
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                ForeColor = ColorTranslator.FromHtml("#701A75"),
+                ForeColor = Color.FromArgb(144, 238, 144), // Light green để nổi bật
                 Location = new Point(10, 45),
                 AutoSize = true
             };
@@ -865,63 +864,16 @@ namespace BullyAlgorithmDemo
             {
                 Text = isLeader ? "Leader" : "Follower",
                 Font = new Font("Segoe UI", 8),
-                ForeColor = ColorTranslator.FromHtml("#701A75"),
+                ForeColor = Color.White, // Màu trắng để thấy rõ
                 Location = new Point(10, 60),
                 AutoSize = true
             };
-
-            killButton = new Button
-            {
-                Text = "Kill Node",
-                Size = new Size(160, 30),
-                Location = new Point(10, 75),
-                BackColor = ColorTranslator.FromHtml("#DB2777"),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9)
-            };
-            killButton.FlatAppearance.BorderSize = 0;
-            killButton.Click += KillButton_Click;
-
-            reviveButton = new Button
-            {
-                Text = "Revive Node",
-                Size = new Size(160, 30),
-                Location = new Point(10, 75),
-                BackColor = ColorTranslator.FromHtml("#10B981"),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9),
-                Visible = false
-            };
-            reviveButton.FlatAppearance.BorderSize = 0;
-            reviveButton.Click += ReviveButton_Click;
 
             this.Controls.Add(nodeLabel);
             this.Controls.Add(leaderIcon);
             this.Controls.Add(statusLabel);
             this.Controls.Add(stateLabel);
             this.Controls.Add(roleLabel);
-            this.Controls.Add(killButton);
-            this.Controls.Add(reviveButton);
-        }
-
-        private void KillButton_Click(object? sender, EventArgs e)
-        {
-            stateLabel.Text = "Dead";
-            stateLabel.ForeColor = Color.Red;
-            killButton.Visible = false;
-            reviveButton.Visible = true;
-            this.BackColor = ColorTranslator.FromHtml("#FCA5A5");
-        }
-
-        private void ReviveButton_Click(object? sender, EventArgs e)
-        {
-            stateLabel.Text = "Alive";
-            stateLabel.ForeColor = ColorTranslator.FromHtml("#701A75");
-            reviveButton.Visible = false;
-            killButton.Visible = true;
-            this.BackColor = ColorTranslator.FromHtml("#F0ABFC");
         }
 
         public void UpdateNode(bool isLeader)
@@ -934,7 +886,7 @@ namespace BullyAlgorithmDemo
             // Làm nổi bật vương miện khi là leader
             if (isLeader)
             {
-                leaderIcon.ForeColor = ColorTranslator.FromHtml("#FCD34D"); // Vàng
+                leaderIcon.ForeColor = ColorTranslator.FromHtml("#FFD700"); // Vàng vàng để nổi bật trên nền xanh đậm
                 leaderIcon.Font = new Font("Segoe UI", 16, FontStyle.Bold);
             }
         }
