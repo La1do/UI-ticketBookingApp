@@ -5,6 +5,8 @@ using System.ComponentModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Net.Http;
+using System.Threading;
 using api;
 
 namespace BullyAlgorithmDemo
@@ -31,11 +33,24 @@ namespace BullyAlgorithmDemo
         private DataGridView transactionGrid = null!;
 
         private System.Windows.Forms.Timer refreshTimer = null!;
+        private System.Windows.Forms.Timer pingTimer = null!;
         private bool isLoadingFromApi = false;
         private SocketService? socketService;
+        private static readonly HttpClient httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
 
         // Lưu election events để truyền vào form khi mở
         private List<ElectionDto> electionEventsHistory = new List<ElectionDto>();
+
+        // Danh sách node URLs để ping
+        private readonly Dictionary<int, string> nodeUrls = new Dictionary<int, string>
+        {
+            { 1, "http://10.15.240.214:3000" }, // Hùng
+            { 2, "http://10.15.240.99:3000" },  // Hậu
+            { 3, "http://10.15.240.171:3000" }, // Khánh
+            { 4, "http://localhost:3000" },      // Localhost (test)
+            { 5, "http://10.15.240.47:3000" },   // Giang
+            { 6, "http://10.15.240.149:3000" }  // Tuấn
+        };
 
         public AdminDashboard()
         {
@@ -62,6 +77,18 @@ namespace BullyAlgorithmDemo
                 }
             };
             refreshTimer.Start();
+
+            // Setup timer để ping nodes định kỳ (mỗi 3 giây)
+            pingTimer = new System.Windows.Forms.Timer();
+            pingTimer.Interval = 1000; // 3 giây
+            pingTimer.Tick += async (s, e) =>
+            {
+                await PingAllNodes();
+            };
+            pingTimer.Start();
+
+            // Ping ngay lập tức khi khởi động
+            _ = Task.Run(async () => await PingAllNodes());
         }
 
         private void InitializeComponents()
@@ -428,6 +455,71 @@ namespace BullyAlgorithmDemo
             }
         }
 
+        private async Task PingAllNodes()
+        {
+            if (nodeControls == null || isDisposing) return;
+
+            // Ping tất cả nodes song song
+            var pingTasks = new List<Task>();
+
+            for (int i = 0; i < nodeControls.Length; i++)
+            {
+                int nodeId = i + 1;
+                int index = i; // Capture index để dùng trong lambda
+
+                if (nodeUrls.ContainsKey(nodeId))
+                {
+                    pingTasks.Add(Task.Run(async () =>
+                    {
+                        bool isAlive = await PingNode(nodeUrls[nodeId]);
+                        
+                        // Update UI trên main thread
+                        if (!isDisposing && !this.IsDisposed)
+                        {
+                            this.Invoke(new Action(() =>
+                            {
+                                if (index >= 0 && index < nodeControls.Length && nodeControls[index] != null)
+                                {
+                                    nodeControls[index].UpdateAliveState(isAlive);
+                                }
+                            }));
+                        }
+                    }));
+                }
+            }
+
+            await Task.WhenAll(pingTasks);
+        }
+
+        private async Task<bool> PingNode(string url)
+        {
+            try
+            {
+                // Thử ping đến endpoint /node hoặc root
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2)))
+                {
+                    var response = await httpClient.GetAsync($"{url}/node", cts.Token);
+                    return response.IsSuccessStatusCode;
+                }
+            }
+            catch
+            {
+                // Nếu /node không hoạt động, thử ping root
+                try
+                {
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2)))
+                    {
+                        var response = await httpClient.GetAsync(url, cts.Token);
+                        return response.IsSuccessStatusCode;
+                    }
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+        }
+
         private void UpdateSeatMapFromApi(List<SeatDto> seats)
         {
             if (seatControls == null) return;
@@ -785,11 +877,17 @@ namespace BullyAlgorithmDemo
         {
             isDisposing = true;
 
-            // Stop timer
+            // Stop timers
             if (refreshTimer != null)
             {
                 refreshTimer.Stop();
                 refreshTimer.Dispose();
+            }
+
+            if (pingTimer != null)
+            {
+                pingTimer.Stop();
+                pingTimer.Dispose();
             }
 
             // Dispose socket (non-blocking now)
@@ -888,6 +986,22 @@ namespace BullyAlgorithmDemo
             {
                 leaderIcon.ForeColor = ColorTranslator.FromHtml("#FFD700"); // Vàng vàng để nổi bật trên nền xanh đậm
                 leaderIcon.Font = new Font("Segoe UI", 16, FontStyle.Bold);
+            }
+        }
+
+        public void UpdateAliveState(bool isAlive)
+        {
+            if (stateLabel == null) return;
+
+            if (isAlive)
+            {
+                stateLabel.Text = "Alive";
+                stateLabel.ForeColor = Color.FromArgb(144, 238, 144); // Light green
+            }
+            else
+            {
+                stateLabel.Text = "Dead";
+                stateLabel.ForeColor = Color.FromArgb(255, 99, 71); // Tomato red
             }
         }
     }
