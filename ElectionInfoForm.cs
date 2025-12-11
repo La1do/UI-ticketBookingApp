@@ -133,7 +133,7 @@ namespace BullyAlgorithmDemo
                     electionEvents.Add(evt);
                 }
 
-                electionEvents = electionEvents.OrderBy(e => e.Timestamp).ToList();
+                electionEvents = electionEvents.OrderByDescending(e => e.Timestamp).ToList();
                 RenderElectionEvents();
 
                 if (socketService != null && socketService.IsConnected)
@@ -272,11 +272,10 @@ namespace BullyAlgorithmDemo
                     electionEvents = electionEvents
                         .OrderByDescending(e => e.Timestamp)
                         .Take(MAX_HISTORY)
-                        .OrderBy(e => e.Timestamp)
                         .ToList();
                 }
 
-                electionEvents = electionEvents.OrderBy(e => e.Timestamp).ToList();
+                electionEvents = electionEvents.OrderByDescending(e => e.Timestamp).ToList();
 
                 Console.WriteLine($"[ElectionInfoForm] Rendering {electionEvents.Count} events");
                 RenderElectionEvents();

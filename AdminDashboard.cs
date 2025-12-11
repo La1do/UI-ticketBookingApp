@@ -47,10 +47,38 @@ namespace BullyAlgorithmDemo
             { 1, "http://10.15.240.214:3000" }, // Hùng
             { 2, "http://10.15.240.99:3000" },  // Hậu
             { 3, "http://10.15.240.171:3000" }, // Khánh
-            { 4, "http://localhost:3000" },      // Localhost (test)
+            // { 4, "http://10.15.240.248:3000" }, // Trương
             { 5, "http://10.15.240.47:3000" },   // Giang
-            { 6, "http://10.15.240.149:3000" }  // Tuấn
+            { 6, "http://10.15.240.149:3000" },  // Tuấn
+            { 4, "http://localhost:3000" }, // Trương (local for testing)
         };
+
+        // Danh sách tên hiển thị cho từng node
+        private static readonly Dictionary<int, string> nodeNames = new Dictionary<int, string>
+        {
+            { 1, "Hùng" },
+            { 2, "Hậu" },
+            { 3, "Khánh" },
+            { 4, "Trương" },
+            { 5, "Giang" },
+            { 6, "Tuấn" }
+        };
+
+        // Helper method để lấy tên node
+        public static string GetNodeDisplayName(int nodeId)
+        {
+            return nodeNames.TryGetValue(nodeId, out string? name)
+                ? $"{name} (Node {nodeId})"
+                : $"Node {nodeId}";
+        }
+
+        // Helper method để lấy chỉ tên node (không có ID)
+        public static string GetNodeNameOnly(int nodeId)
+        {
+            return nodeNames.TryGetValue(nodeId, out string? name)
+                ? name
+                : $"Node {nodeId}";
+        }
 
         public AdminDashboard()
         {
@@ -472,7 +500,7 @@ namespace BullyAlgorithmDemo
                     pingTasks.Add(Task.Run(async () =>
                     {
                         bool isAlive = await PingNode(nodeUrls[nodeId]);
-                        
+
                         // Update UI trên main thread
                         if (!isDisposing && !this.IsDisposed)
                         {
@@ -590,7 +618,7 @@ namespace BullyAlgorithmDemo
             {
                 string time = transaction.timestamp.ToString("dd/MM/yyyy HH:mm:ss");
 
-                string source = $"Node {transaction.nodeId}";
+                string source = GetNodeDisplayName(transaction.nodeId);
                 string action = transaction.actionType.ToUpper();
                 string message = transaction.description;
 
@@ -921,9 +949,10 @@ namespace BullyAlgorithmDemo
 
         private void InitializeNodeComponents()
         {
+            string displayName = AdminDashboard.GetNodeDisplayName(nodeNumber);
             nodeLabel = new Label
             {
-                Text = $"● Node {nodeNumber}",
+                Text = $"● {displayName}",
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = Color.White, // Màu trắng để thấy rõ trên nền xanh đậm
                 Location = new Point(10, 8),
@@ -1062,11 +1091,11 @@ namespace BullyAlgorithmDemo
             if (isBooked)
             {
                 int displayNodeNumber = realNodeNumber ?? GetNodeNumber();
-
+                string nodeDisplayName = AdminDashboard.GetNodeNameOnly(displayNodeNumber);
 
                 nodeLabel = new Label
                 {
-                    Text = $"via Node {displayNodeNumber}",
+                    Text = $"via {nodeDisplayName}",
                     Font = new Font("Segoe UI", 7),
                     ForeColor = Color.White,
                     Location = new Point(50, 0),
@@ -1111,9 +1140,11 @@ namespace BullyAlgorithmDemo
 
             if (isBooked && nodeNumber.HasValue)
             {
+                string nodeDisplayName = AdminDashboard.GetNodeNameOnly(nodeNumber.Value);
+
                 nodeLabel = new Label
                 {
-                    Text = $"via Node {nodeNumber.Value}",
+                    Text = $"via {nodeDisplayName}",
                     Font = new Font("Segoe UI", 7),
                     ForeColor = Color.White,
                     Location = new Point(50, 0),
