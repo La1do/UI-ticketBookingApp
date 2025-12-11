@@ -47,38 +47,10 @@ namespace BullyAlgorithmDemo
             { 1, "http://10.15.240.214:3000" }, // Hùng
             { 2, "http://10.15.240.99:3000" },  // Hậu
             { 3, "http://10.15.240.171:3000" }, // Khánh
-            // { 4, "http://10.15.240.248:3000" }, // Trương
+            { 4, "http://localhost:3000" },      // Localhost (test)
             { 5, "http://10.15.240.47:3000" },   // Giang
-            { 6, "http://10.15.240.149:3000" },  // Tuấn
-            { 4, "http://localhost:3000" }, // Trương (local for testing)
+            { 6, "http://10.15.240.149:3000" }  // Tuấn
         };
-
-        // Danh sách tên hiển thị cho từng node
-        private static readonly Dictionary<int, string> nodeNames = new Dictionary<int, string>
-        {
-            { 1, "Hùng" },
-            { 2, "Hậu" },
-            { 3, "Khánh" },
-            { 4, "Trương" },
-            { 5, "Giang" },
-            { 6, "Tuấn" }
-        };
-
-        // Helper method để lấy tên node
-        public static string GetNodeDisplayName(int nodeId)
-        {
-            return nodeNames.TryGetValue(nodeId, out string? name)
-                ? $"{name} (Node {nodeId})"
-                : $"Node {nodeId}";
-        }
-
-        // Helper method để lấy chỉ tên node (không có ID)
-        public static string GetNodeNameOnly(int nodeId)
-        {
-            return nodeNames.TryGetValue(nodeId, out string? name)
-                ? name
-                : $"Node {nodeId}";
-        }
 
         public AdminDashboard()
         {
@@ -95,10 +67,9 @@ namespace BullyAlgorithmDemo
 
             // Setup timer để refresh định kỳ (fallback nếu socket không hoạt động, mỗi 2 giây)
             refreshTimer = new System.Windows.Forms.Timer();
-            refreshTimer.Interval = 2000; // 2 giây để đảm bảo cập nhật nhanh nếu socket không hoạt động
+            refreshTimer.Interval = 2000; 
             refreshTimer.Tick += async (s, e) =>
             {
-                // Chỉ refresh nếu socket không kết nối
                 if (socketService == null || !socketService.IsConnected)
                 {
                     await RefreshData();
@@ -108,14 +79,13 @@ namespace BullyAlgorithmDemo
 
             // Setup timer để ping nodes định kỳ (mỗi 3 giây)
             pingTimer = new System.Windows.Forms.Timer();
-            pingTimer.Interval = 1000; // 3 giây
+            pingTimer.Interval = 1000; 
             pingTimer.Tick += async (s, e) =>
             {
                 await PingAllNodes();
             };
             pingTimer.Start();
 
-            // Ping ngay lập tức khi khởi động
             _ = Task.Run(async () => await PingAllNodes());
         }
 
@@ -123,7 +93,8 @@ namespace BullyAlgorithmDemo
         {
             this.Text = "Bully Algorithm - Admin Dashboard";
             this.Size = new Size(1200, 800);
-            this.BackColor = ColorTranslator.FromHtml("#EC4899");
+            // Modern dark background
+            this.BackColor = ColorTranslator.FromHtml("#0A0E27"); 
             this.StartPosition = FormStartPosition.CenterScreen;
 
             // Header
@@ -138,7 +109,7 @@ namespace BullyAlgorithmDemo
             {
                 Text = "Admin Dashboard",
                 Font = new Font("Segoe UI", 20, FontStyle.Bold),
-                ForeColor = Color.White,
+                ForeColor = ColorTranslator.FromHtml("#E0E7FF"),
                 Location = new Point(20, 10),
                 AutoSize = true
             };
@@ -147,7 +118,7 @@ namespace BullyAlgorithmDemo
             {
                 Text = "Bully Algorithm • Real-time Node Coordination",
                 Font = new Font("Segoe UI", 10),
-                ForeColor = Color.White,
+                ForeColor = ColorTranslator.FromHtml("#94A3B8"),
                 Location = new Point(20, 45),
                 AutoSize = true
             };
@@ -157,10 +128,10 @@ namespace BullyAlgorithmDemo
                 Text = "⚡ System Active",
                 Size = new Size(140, 40),
                 Location = new Point(1030, 20),
-                BackColor = ColorTranslator.FromHtml("#DB2777"),
+                BackColor = ColorTranslator.FromHtml("#10B981"),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10)
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
             };
             systemActiveButton.FlatAppearance.BorderSize = 0;
 
@@ -169,7 +140,7 @@ namespace BullyAlgorithmDemo
                 Text = "⚡ Election Info",
                 Size = new Size(120, 40),
                 Location = new Point(790, 20),
-                BackColor = ColorTranslator.FromHtml("#8B5CF6"),
+                BackColor = ColorTranslator.FromHtml("#6366F1"),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
@@ -183,7 +154,7 @@ namespace BullyAlgorithmDemo
                 Text = "🔄 Refresh",
                 Size = new Size(100, 40),
                 Location = new Point(920, 20),
-                BackColor = ColorTranslator.FromHtml("#DB2777"),
+                BackColor = ColorTranslator.FromHtml("#475569"),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10),
@@ -197,14 +168,14 @@ namespace BullyAlgorithmDemo
             {
                 Location = new Point(20, 90),
                 Size = new Size(1160, 160),
-                BackColor = ColorTranslator.FromHtml("#ffffffff")
+                BackColor = Color.Transparent
             };
 
             nodeStatusLabel = new Label
             {
                 Text = "Node Cluster Status",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = ColorTranslator.FromHtml("#831843"),
+                ForeColor = ColorTranslator.FromHtml("#E0E7FF"),
                 Location = new Point(15, 10),
                 AutoSize = true
 
@@ -215,7 +186,7 @@ namespace BullyAlgorithmDemo
             {
                 Location = new Point(20, 260),
                 Size = new Size(1160, 280),
-                BackColor = ColorTranslator.FromHtml("#F9A8D4"),
+                BackColor = ColorTranslator.FromHtml("#16213E"),
                 AutoScroll = true
             };
 
@@ -223,7 +194,7 @@ namespace BullyAlgorithmDemo
             {
                 Text = "Cinema Seat Map (Distributed Database)",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = ColorTranslator.FromHtml("#831843"),
+                ForeColor = ColorTranslator.FromHtml("#E0E7FF"),
                 Location = new Point(15, 10),
                 AutoSize = true
             };
@@ -233,14 +204,14 @@ namespace BullyAlgorithmDemo
             {
                 Location = new Point(20, 550),
                 Size = new Size(1160, 200),
-                BackColor = ColorTranslator.FromHtml("#F9A8D4")
+                BackColor = ColorTranslator.FromHtml("#16213E")
             };
 
             transactionLabel = new Label
             {
                 Text = "Live Transaction Logs",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = ColorTranslator.FromHtml("#831843"),
+                ForeColor = ColorTranslator.FromHtml("#E0E7FF"),
                 Location = new Point(15, 10),
                 AutoSize = true,
 
@@ -250,13 +221,22 @@ namespace BullyAlgorithmDemo
             {
                 Location = new Point(15, 40),
                 Size = new Size(1130, 145),
-                BackgroundColor = Color.White,
+                BackgroundColor = ColorTranslator.FromHtml("#0F172A"),
                 BorderStyle = BorderStyle.None,
                 AllowUserToAddRows = false,
                 ReadOnly = true,
                 RowHeadersVisible = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                GridColor = ColorTranslator.FromHtml("#334155")
             };
+
+            // Style cho Header của Grid
+            transactionGrid.EnableHeadersVisualStyles = false;
+            transactionGrid.ColumnHeadersDefaultCellStyle.BackColor = ColorTranslator.FromHtml("#1E293B");
+            transactionGrid.ColumnHeadersDefaultCellStyle.ForeColor = ColorTranslator.FromHtml("#E0E7FF");
+            transactionGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            transactionGrid.DefaultCellStyle.BackColor = ColorTranslator.FromHtml("#0F172A");
+            transactionGrid.DefaultCellStyle.ForeColor = ColorTranslator.FromHtml("#CBD5E1");
 
             transactionGrid.Columns.Add("Time", "Time");
             transactionGrid.Columns.Add("Source", "Source");
@@ -293,7 +273,6 @@ namespace BullyAlgorithmDemo
 
         private void CreateNodeControls()
         {
-            // Tạo node controls với dữ liệu mẫu ban đầu, sẽ được cập nhật từ API
             nodeControls = new NodeControl[6];
 
             for (int i = 0; i < 6; i++)
@@ -313,7 +292,6 @@ namespace BullyAlgorithmDemo
                 isLoadingFromApi = true;
                 subtitleLabel.Text = "Loading data from server...";
 
-                // Load cả seats, nodes và transactions từ API
                 var seatsTask = ApiServiceSeat.GetSeatsAsync();
                 var nodesTask = ApiServiceNode.GetNodesAsync();
                 var transactionsTask = ApiServiceLog.GetTransactionsAsync();
@@ -324,7 +302,6 @@ namespace BullyAlgorithmDemo
                 var nodes = await nodesTask;
                 var transactions = await transactionsTask;
 
-                // Load node data
                 if (nodes != null && nodes.Count > 0)
                 {
                     UpdateNodesFromApi(nodes);
@@ -332,14 +309,12 @@ namespace BullyAlgorithmDemo
 
                 if (seats != null && seats.Count > 0)
                 {
-                    // Load thành công từ API
                     CreateSeatMapFromApi(seats);
                     subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Live Data)";
                     isLoadingFromApi = false;
                 }
                 else
                 {
-                    // Không load được, hiển thị bảng trống
                     CreateEmptySeatMap();
                     subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Server Offline)";
                     systemActiveButton.Text = "⚠️ Server Offline";
@@ -347,7 +322,6 @@ namespace BullyAlgorithmDemo
                     isLoadingFromApi = false;
                 }
 
-                // Load transactions
                 if (transactions != null && transactions.Count > 0)
                 {
                     UpdateTransactionGridFromApi(transactions);
@@ -355,7 +329,6 @@ namespace BullyAlgorithmDemo
             }
             catch (Exception ex)
             {
-                // Lỗi, hiển thị bảng trống
                 CreateEmptySeatMap();
                 subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Connection Error)";
                 systemActiveButton.Text = "⚠️ Connection Error";
@@ -366,13 +339,10 @@ namespace BullyAlgorithmDemo
 
         private async Task RefreshData()
         {
-            // Không check isLoadingFromApi ở đây vì có thể bị stuck
-            // Thay vào đó, chỉ check khi đang load lần đầu
             Console.WriteLine("[AdminDashboard] RefreshData called");
 
             try
             {
-                // Refresh cả seats, nodes và transactions
                 var seatsTask = ApiServiceSeat.GetSeatsAsync();
                 var nodesTask = ApiServiceNode.GetNodesAsync();
                 var transactionsTask = ApiServiceLog.GetTransactionsAsync();
@@ -383,7 +353,6 @@ namespace BullyAlgorithmDemo
                 var nodes = await nodesTask;
                 var transactions = await transactionsTask;
 
-                // Update node data
                 if (nodes != null && nodes.Count > 0)
                 {
                     UpdateNodesFromApi(nodes);
@@ -393,7 +362,7 @@ namespace BullyAlgorithmDemo
                 {
                     UpdateSeatMapFromApi(seats);
                     systemActiveButton.Text = "⚡ System Active";
-                    systemActiveButton.BackColor = ColorTranslator.FromHtml("#DB2777");
+                    systemActiveButton.BackColor = ColorTranslator.FromHtml("#10B981");
                     subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Live Data)";
                 }
                 else
@@ -402,7 +371,6 @@ namespace BullyAlgorithmDemo
                     systemActiveButton.BackColor = ColorTranslator.FromHtml("#EF4444");
                 }
 
-                // Update transactions
                 if (transactions != null && transactions.Count > 0)
                 {
                     UpdateTransactionGridFromApi(transactions);
@@ -417,7 +385,6 @@ namespace BullyAlgorithmDemo
 
         private void CreateSeatMapFromApi(List<SeatDto> seats)
         {
-            // Clear existing seats
             seatMapPanel.Controls.Clear();
             seatMapPanel.Controls.Add(seatMapLabel);
 
@@ -434,8 +401,6 @@ namespace BullyAlgorithmDemo
                 for (int j = 0; j < cols; j++)
                 {
                     string seatName = $"{rows[i]}{j + 1}";
-
-                    // Tìm seat trong API data
                     var seatData = seats.FirstOrDefault(s => s.seatNumber == seatName);
 
                     bool isBooked = seatData != null && seatData.IsOccupied;
@@ -460,16 +425,12 @@ namespace BullyAlgorithmDemo
 
             foreach (var nodeData in nodes)
             {
-                // Tìm node control tương ứng với node id
-                // Node id có thể bắt đầu từ 1 hoặc 0, cần xử lý cả hai trường hợp
                 int index = -1;
 
-                // Thử với id bắt đầu từ 1
                 if (nodeData.id >= 1 && nodeData.id <= nodeControls.Length)
                 {
                     index = nodeData.id - 1;
                 }
-                // Thử với id bắt đầu từ 0
                 else if (nodeData.id >= 0 && nodeData.id < nodeControls.Length)
                 {
                     index = nodeData.id;
@@ -487,21 +448,19 @@ namespace BullyAlgorithmDemo
         {
             if (nodeControls == null || isDisposing) return;
 
-            // Ping tất cả nodes song song
             var pingTasks = new List<Task>();
 
             for (int i = 0; i < nodeControls.Length; i++)
             {
                 int nodeId = i + 1;
-                int index = i; // Capture index để dùng trong lambda
+                int index = i;
 
                 if (nodeUrls.ContainsKey(nodeId))
                 {
                     pingTasks.Add(Task.Run(async () =>
                     {
                         bool isAlive = await PingNode(nodeUrls[nodeId]);
-
-                        // Update UI trên main thread
+                        
                         if (!isDisposing && !this.IsDisposed)
                         {
                             this.Invoke(new Action(() =>
@@ -523,7 +482,6 @@ namespace BullyAlgorithmDemo
         {
             try
             {
-                // Thử ping đến endpoint /node hoặc root
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2)))
                 {
                     var response = await httpClient.GetAsync($"{url}/node", cts.Token);
@@ -532,7 +490,6 @@ namespace BullyAlgorithmDemo
             }
             catch
             {
-                // Nếu /node không hoạt động, thử ping root
                 try
                 {
                     using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2)))
@@ -576,7 +533,6 @@ namespace BullyAlgorithmDemo
 
         private void CreateEmptySeatMap()
         {
-            // Clear existing seats
             seatMapPanel.Controls.Clear();
             seatMapPanel.Controls.Add(seatMapLabel);
 
@@ -608,17 +564,14 @@ namespace BullyAlgorithmDemo
 
         private void UpdateTransactionGridFromApi(List<TransactionDto> transactions)
         {
-            // Clear existing rows
             transactionGrid.Rows.Clear();
-
-            // Sort by timestamp descending (newest first)
             var sortedTransactions = transactions.OrderByDescending(t => t.timestamp).ToList();
 
             foreach (var transaction in sortedTransactions)
             {
                 string time = transaction.timestamp.ToString("dd/MM/yyyy HH:mm:ss");
 
-                string source = GetNodeDisplayName(transaction.nodeId);
+                string source = $"Node {transaction.nodeId}";
                 string action = transaction.actionType.ToUpper();
                 string message = transaction.description;
 
@@ -631,32 +584,36 @@ namespace BullyAlgorithmDemo
             int rowIndex = transactionGrid.Rows.Add(time, source, action, message);
             DataGridViewRow row = transactionGrid.Rows[rowIndex];
 
-            // Style source cell
+            row.DefaultCellStyle.BackColor = ColorTranslator.FromHtml("#0F172A");
+            row.DefaultCellStyle.ForeColor = ColorTranslator.FromHtml("#CBD5E1");
+
             DataGridViewCell sourceCell = row.Cells[1];
-            sourceCell.Style.BackColor = ColorTranslator.FromHtml("#8B5CF6");
+            sourceCell.Style.BackColor = ColorTranslator.FromHtml("#475569");
             sourceCell.Style.ForeColor = Color.White;
             sourceCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
             sourceCell.Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
 
-            // Style action cell
             DataGridViewCell actionCell = row.Cells[2];
             switch (action.ToUpper())
             {
                 case "HEARTBEAT":
-                    actionCell.Style.BackColor = ColorTranslator.FromHtml("#EC4899");
+                    actionCell.Style.BackColor = ColorTranslator.FromHtml("#64748B");
+                    actionCell.Style.ForeColor = Color.White;
                     break;
                 case "BUY":
                 case "BOOK":
                     actionCell.Style.BackColor = ColorTranslator.FromHtml("#10B981");
+                    actionCell.Style.ForeColor = Color.White;
                     break;
                 case "LOG":
-                    actionCell.Style.BackColor = ColorTranslator.FromHtml("#F59E0B");
+                    actionCell.Style.BackColor = ColorTranslator.FromHtml("#8B5CF6");
+                    actionCell.Style.ForeColor = Color.White;
                     break;
                 default:
-                    actionCell.Style.BackColor = ColorTranslator.FromHtml("#6B7280");
+                    actionCell.Style.BackColor = ColorTranslator.FromHtml("#475569");
+                    actionCell.Style.ForeColor = Color.White;
                     break;
             }
-            actionCell.Style.ForeColor = Color.White;
             actionCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
             actionCell.Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
         }
@@ -665,83 +622,48 @@ namespace BullyAlgorithmDemo
         {
             try
             {
-                // Sử dụng default URL từ constructor hoặc có thể config từ file
                 socketService = new SocketService();
 
-                // Lắng nghe cập nhật seats với better thread safety
                 socketService.OnSeatsUpdate += (seats) =>
                 {
                     if (isDisposing || this.IsDisposed) return;
-
                     try
                     {
                         if (this.InvokeRequired)
-                        {
                             this.BeginInvoke(new Action(() => HandleSeatsUpdate(seats)));
-                        }
                         else
-                        {
                             HandleSeatsUpdate(seats);
-                        }
                     }
-                    catch (ObjectDisposedException)
-                    {
-                        // Form đã disposed, ignore
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error in OnSeatsUpdate: {ex.Message}");
-                    }
+                    catch (ObjectDisposedException) { }
+                    catch (Exception ex) { Console.WriteLine($"Error in OnSeatsUpdate: {ex.Message}"); }
                 };
 
                 socketService.OnNodesUpdate += (nodes) =>
                 {
                     if (isDisposing || this.IsDisposed) return;
-
                     try
                     {
                         if (this.InvokeRequired)
-                        {
                             this.BeginInvoke(new Action(() => HandleNodesUpdate(nodes)));
-                        }
                         else
-                        {
                             HandleNodesUpdate(nodes);
-                        }
                     }
-                    catch (ObjectDisposedException)
-                    {
-                        // Form đã disposed, ignore
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error in OnNodesUpdate: {ex.Message}");
-                    }
+                    catch (ObjectDisposedException) { }
+                    catch (Exception ex) { Console.WriteLine($"Error in OnNodesUpdate: {ex.Message}"); }
                 };
 
                 socketService.OnTransactionsUpdate += (transactions) =>
                 {
                     if (isDisposing || this.IsDisposed) return;
-
                     try
                     {
                         if (this.InvokeRequired)
-                        {
                             this.BeginInvoke(new Action(() => HandleTransactionsUpdate(transactions)));
-                        }
                         else
-                        {
                             HandleTransactionsUpdate(transactions);
-                        }
                     }
-                    catch (ObjectDisposedException)
-                    {
-                        // Form đã disposed, ignore
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error in OnTransactionsUpdate: {ex.Message}");
-                    }
+                    catch (ObjectDisposedException) { }
+                    catch (Exception ex) { Console.WriteLine($"Error in OnTransactionsUpdate: {ex.Message}"); }
                 };
 
                 socketService.OnElectionUpdate += (elections) =>
@@ -777,29 +699,17 @@ namespace BullyAlgorithmDemo
                 socketService.OnConnectionStatusChanged += (isConnected) =>
                 {
                     if (isDisposing || this.IsDisposed) return;
-
                     try
                     {
                         if (this.InvokeRequired)
-                        {
                             this.BeginInvoke(new Action(() => HandleConnectionStatusChanged(isConnected)));
-                        }
                         else
-                        {
                             HandleConnectionStatusChanged(isConnected);
-                        }
                     }
-                    catch (ObjectDisposedException)
-                    {
-                        // Form đã disposed, ignore
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error in OnConnectionStatusChanged: {ex.Message}");
-                    }
+                    catch (ObjectDisposedException) { }
+                    catch (Exception ex) { Console.WriteLine($"Error in OnConnectionStatusChanged: {ex.Message}"); }
                 };
 
-                // Kết nối socket
                 await socketService.ConnectAsync();
             }
             catch (Exception ex)
@@ -816,15 +726,12 @@ namespace BullyAlgorithmDemo
             if (seats != null && seats.Count > 0)
             {
                 if (seatControls == null)
-                {
                     CreateSeatMapFromApi(seats);
-                }
                 else
-                {
                     UpdateSeatMapFromApi(seats);
-                }
+                
                 systemActiveButton.Text = "⚡ System Active";
-                systemActiveButton.BackColor = ColorTranslator.FromHtml("#DB2777");
+                systemActiveButton.BackColor = ColorTranslator.FromHtml("#10B981");
                 subtitleLabel.Text = $"Bully Algorithm • Real-time Node Coordination (Last update: {DateTime.Now:HH:mm:ss})";
             }
         }
@@ -857,7 +764,7 @@ namespace BullyAlgorithmDemo
             {
                 subtitleLabel.Text = "Bully Algorithm • Real-time Node Coordination (Socket Connected - Real-time Active)";
                 systemActiveButton.Text = "⚡ System Active";
-                systemActiveButton.BackColor = ColorTranslator.FromHtml("#DB2777");
+                systemActiveButton.BackColor = ColorTranslator.FromHtml("#10B981");
             }
             else
             {
@@ -869,7 +776,6 @@ namespace BullyAlgorithmDemo
 
         private void ElectionInfoButton_Click(object? sender, EventArgs e)
         {
-            // Mở popup election info với socket service và history
             ElectionInfoForm electionForm = new ElectionInfoForm(socketService, electionEventsHistory);
             electionForm.ShowDialog(this);
         }
@@ -905,7 +811,6 @@ namespace BullyAlgorithmDemo
         {
             isDisposing = true;
 
-            // Stop timers
             if (refreshTimer != null)
             {
                 refreshTimer.Stop();
@@ -918,7 +823,6 @@ namespace BullyAlgorithmDemo
                 pingTimer.Dispose();
             }
 
-            // Dispose socket (non-blocking now)
             socketService?.Dispose();
 
             base.OnFormClosing(e);
@@ -942,19 +846,18 @@ namespace BullyAlgorithmDemo
             isLeader = leader;
 
             this.Size = new Size(180, 110);
-            this.BackColor = ColorTranslator.FromHtml("#000080"); // Navy blue background
+            this.BackColor = ColorTranslator.FromHtml("#1E293B");
 
             InitializeNodeComponents();
         }
 
         private void InitializeNodeComponents()
         {
-            string displayName = AdminDashboard.GetNodeDisplayName(nodeNumber);
             nodeLabel = new Label
             {
-                Text = $"● {displayName}",
+                Text = $"● Node {nodeNumber}",
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                ForeColor = Color.White, // Màu trắng để thấy rõ trên nền xanh đậm
+                ForeColor = ColorTranslator.FromHtml("#E0E7FF"),
                 Location = new Point(10, 8),
                 AutoSize = true
             };
@@ -966,14 +869,14 @@ namespace BullyAlgorithmDemo
                 Location = new Point(145, 3),
                 AutoSize = true,
                 Visible = isLeader,
-                ForeColor = ColorTranslator.FromHtml("#fffb04ff")
+                ForeColor = ColorTranslator.FromHtml("#FBBF24")
             };
 
             statusLabel = new Label
             {
                 Text = "Status",
                 Font = new Font("Segoe UI", 8),
-                ForeColor = Color.FromArgb(220, 220, 220), // Màu xám sáng để thấy rõ
+                ForeColor = ColorTranslator.FromHtml("#94A3B8"),
                 Location = new Point(10, 30),
                 AutoSize = true
             };
@@ -982,7 +885,7 @@ namespace BullyAlgorithmDemo
             {
                 Text = "Alive",
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                ForeColor = Color.FromArgb(144, 238, 144), // Light green để nổi bật
+                ForeColor = ColorTranslator.FromHtml("#10B981"),
                 Location = new Point(10, 45),
                 AutoSize = true
             };
@@ -991,7 +894,7 @@ namespace BullyAlgorithmDemo
             {
                 Text = isLeader ? "Leader" : "Follower",
                 Font = new Font("Segoe UI", 8),
-                ForeColor = Color.White, // Màu trắng để thấy rõ
+                ForeColor = ColorTranslator.FromHtml("#CBD5E1"),
                 Location = new Point(10, 60),
                 AutoSize = true
             };
@@ -1005,15 +908,13 @@ namespace BullyAlgorithmDemo
 
         public void UpdateNode(bool isLeader)
         {
-            // Cập nhật leader status
             this.isLeader = isLeader;
             leaderIcon.Visible = isLeader;
             roleLabel.Text = isLeader ? "Leader" : "Follower";
 
-            // Làm nổi bật vương miện khi là leader
             if (isLeader)
             {
-                leaderIcon.ForeColor = ColorTranslator.FromHtml("#FFD700"); // Vàng vàng để nổi bật trên nền xanh đậm
+                leaderIcon.ForeColor = ColorTranslator.FromHtml("#FBBF24");
                 leaderIcon.Font = new Font("Segoe UI", 16, FontStyle.Bold);
             }
         }
@@ -1025,12 +926,12 @@ namespace BullyAlgorithmDemo
             if (isAlive)
             {
                 stateLabel.Text = "Alive";
-                stateLabel.ForeColor = Color.FromArgb(144, 238, 144); // Light green
+                stateLabel.ForeColor = ColorTranslator.FromHtml("#10B981");
             }
             else
             {
                 stateLabel.Text = "Dead";
-                stateLabel.ForeColor = Color.FromArgb(255, 99, 71); // Tomato red
+                stateLabel.ForeColor = ColorTranslator.FromHtml("#64748B");
             }
         }
     }
@@ -1054,20 +955,20 @@ namespace BullyAlgorithmDemo
             realNodeNumber = nodeNumber;
 
             this.Size = new Size(200, 45);
-            this.BackColor = isBooked ? ColorTranslator.FromHtml("#7C3AED") : Color.White;
+            this.BackColor = isBooked ? ColorTranslator.FromHtml("#DC2626") : ColorTranslator.FromHtml("#0F172A");
+            if (!isBooked) this.BorderStyle = BorderStyle.FixedSingle;
+            else this.BorderStyle = BorderStyle.None;
 
             InitializeSeatComponents();
-
         }
 
         private void InitializeSeatComponents()
         {
-
             seatLabel = new Label
             {
                 Text = seatName,
                 Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                ForeColor = isBooked ? Color.White : Color.Black,
+                ForeColor = Color.White,
                 Location = new Point(10, 5),
                 AutoSize = true
             };
@@ -1080,7 +981,7 @@ namespace BullyAlgorithmDemo
             {
                 Text = occupantText,
                 Font = new Font("Segoe UI", 9),
-                ForeColor = isBooked ? Color.White : Color.Gray,
+                ForeColor = isBooked ? ColorTranslator.FromHtml("#FEE2E2") : ColorTranslator.FromHtml("#64748B"),
                 Location = new Point(10, 23),
                 AutoSize = true
             };
@@ -1091,20 +992,18 @@ namespace BullyAlgorithmDemo
             if (isBooked)
             {
                 int displayNodeNumber = realNodeNumber ?? GetNodeNumber();
-                string nodeDisplayName = AdminDashboard.GetNodeNameOnly(displayNodeNumber);
 
                 nodeLabel = new Label
                 {
-                    Text = $"via {nodeDisplayName}",
+                    Text = $"via Node {displayNodeNumber}",
                     Font = new Font("Segoe UI", 7),
-                    ForeColor = Color.White,
+                    ForeColor = ColorTranslator.FromHtml("#FCA5A5"),
                     Location = new Point(50, 0),
                     Size = new Size(65, 20),
                     TextAlign = ContentAlignment.MiddleCenter
                 };
                 this.Controls.Add(nodeLabel);
             }
-
         }
 
         public void UpdateSeat(bool Booked, string? customerName, int? nodeNumber)
@@ -1113,7 +1012,7 @@ namespace BullyAlgorithmDemo
                 realCustomerName == customerName &&
                 realNodeNumber == nodeNumber)
             {
-                return; // Không có thay đổi
+                return;
             }
 
             isBooked = Booked;
@@ -1121,17 +1020,19 @@ namespace BullyAlgorithmDemo
             realNodeNumber = nodeNumber;
 
             // Update UI
-            this.BackColor = isBooked ? ColorTranslator.FromHtml("#7C3AED") : Color.White;
-            seatLabel.ForeColor = isBooked ? Color.White : Color.Black;
+            this.BackColor = isBooked ? ColorTranslator.FromHtml("#DC2626") : ColorTranslator.FromHtml("#0F172A");
+            if (!isBooked) this.BorderStyle = BorderStyle.FixedSingle;
+            else this.BorderStyle = BorderStyle.None;
+
+            seatLabel.ForeColor = Color.White;
 
             string occupantText = isBooked
                 ? (realCustomerName ?? "Unknown")
                 : "Available";
 
             occupantLabel.Text = occupantText;
-            occupantLabel.ForeColor = isBooked ? Color.White : Color.Gray;
+            occupantLabel.ForeColor = isBooked ? ColorTranslator.FromHtml("#FEE2E2") : ColorTranslator.FromHtml("#64748B");
 
-            // Update node label
             if (nodeLabel != null)
             {
                 this.Controls.Remove(nodeLabel);
@@ -1140,13 +1041,11 @@ namespace BullyAlgorithmDemo
 
             if (isBooked && nodeNumber.HasValue)
             {
-                string nodeDisplayName = AdminDashboard.GetNodeNameOnly(nodeNumber.Value);
-
                 nodeLabel = new Label
                 {
-                    Text = $"via {nodeDisplayName}",
+                    Text = $"via Node {nodeNumber.Value}",
                     Font = new Font("Segoe UI", 7),
-                    ForeColor = Color.White,
+                    ForeColor = ColorTranslator.FromHtml("#FCA5A5"),
                     Location = new Point(50, 0),
                     Size = new Size(65, 20),
                     TextAlign = ContentAlignment.MiddleCenter
