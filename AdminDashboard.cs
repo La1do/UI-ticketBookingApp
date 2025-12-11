@@ -47,7 +47,7 @@ namespace BullyAlgorithmDemo
             { 1, "http://10.15.240.214:3000" }, // Hùng
             { 2, "http://10.15.240.99:3000" },  // Hậu
             { 3, "http://10.15.240.171:3000" }, // Khánh
-            { 4, "http://localhost:3000" },      // Localhost (test)
+            { 4, "http://10.15.240.248:3000" },      // Localhost (test)
             { 5, "http://10.15.240.47:3000" },   // Giang
             { 6, "http://10.15.240.149:3000" }  // Tuấn
         };

@@ -23,7 +23,7 @@ namespace api
         public event Action<List<ElectionDto>>? OnElectionUpdate;
         public event Action<bool>? OnConnectionStatusChanged;
 
-        public SocketService(string url = "http://localhost:4000")
+        public SocketService(string url = "http://10.15.240.149:4000")
         {
             serverUrl = url.Replace("ws://", "http://").Replace("wss://", "https://").TrimEnd('/');
             Console.WriteLine($"[Socket] SocketService initialized with URL: {serverUrl}");
