@@ -47,9 +47,20 @@ namespace BullyAlgorithmDemo
             { 1, "http://10.15.240.214:3000" }, // Hùng
             { 2, "http://10.15.240.99:3000" },  // Hậu
             { 3, "http://10.15.240.171:3000" }, // Khánh
-            { 4, "http://10.15.240.248:3000" },      // Localhost (test)
+            { 4, "http://10.15.240.248:3000" },      // Trương (test)
             { 5, "http://10.15.240.47:3000" },   // Giang
             { 6, "http://10.15.240.149:3000" }  // Tuấn
+        };
+
+        // Danh sách tên node theo ID
+        private readonly Dictionary<int, string> nodeNames = new Dictionary<int, string>
+        {
+            { 1, "Hùng" },
+            { 2, "Hậu" },
+            { 3, "Khánh" },
+            { 4, "Trương" },
+            { 5, "Giang" },
+            { 6, "Tuấn" }
         };
 
         public AdminDashboard()
@@ -277,7 +288,9 @@ namespace BullyAlgorithmDemo
 
             for (int i = 0; i < 6; i++)
             {
-                nodeControls[i] = new NodeControl(i + 1, false)
+                int nodeId = i + 1;
+                string nodeName = nodeNames.ContainsKey(nodeId) ? nodeNames[nodeId] : "";
+                nodeControls[i] = new NodeControl(nodeId, false, nodeName)
                 {
                     Location = new Point(15 + (i * 190), 40)
                 };
@@ -690,7 +703,13 @@ namespace BullyAlgorithmDemo
                             electionEventsHistory = electionEventsHistory
                                 .OrderByDescending(e => e.Timestamp)
                                 .Take(100)
-                                .OrderBy(e => e.Timestamp)
+                                .ToList();
+                        }
+                        else
+                        {
+                            // Đảm bảo sắp xếp mới nhất lên đầu
+                            electionEventsHistory = electionEventsHistory
+                                .OrderByDescending(e => e.Timestamp)
                                 .ToList();
                         }
                     }
@@ -839,11 +858,13 @@ namespace BullyAlgorithmDemo
 
         private int nodeNumber;
         private bool isLeader;
+        private string nodeName;
 
-        public NodeControl(int number, bool leader)
+        public NodeControl(int number, bool leader, string name = "")
         {
             nodeNumber = number;
             isLeader = leader;
+            nodeName = name;
 
             this.Size = new Size(180, 110);
             this.BackColor = ColorTranslator.FromHtml("#1E293B");
@@ -853,9 +874,13 @@ namespace BullyAlgorithmDemo
 
         private void InitializeNodeComponents()
         {
+            string nodeText = string.IsNullOrEmpty(nodeName) 
+                ? $"● Node {nodeNumber}" 
+                : $"● Node {nodeNumber} - {nodeName}";
+            
             nodeLabel = new Label
             {
-                Text = $"● Node {nodeNumber}",
+                Text = nodeText,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = ColorTranslator.FromHtml("#E0E7FF"),
                 Location = new Point(10, 8),
