@@ -47,10 +47,9 @@ namespace BullyAlgorithmDemo
             { 1, "http://10.15.240.214:3000" }, // Hùng
             { 2, "http://10.15.240.99:3000" },  // Hậu
             { 3, "http://10.15.240.171:3000" }, // Khánh
-            // { 4, "http://10.15.240.248:3000" }, // Trương
+            { 4, "http://10.15.240.248:3000" }, // Trương
             { 5, "http://10.15.240.47:3000" },   // Giang
-            { 6, "http://10.15.240.149:3000" },  // Tuấn
-            { 4, "http://localhost:3000" }, // Trương (local for testing)
+            { 6, "http://10.15.240.149:3000" }  // Tuấn
         };
 
         // Danh sách tên hiển thị cho từng node
@@ -67,16 +66,16 @@ namespace BullyAlgorithmDemo
         // Helper method để lấy tên node
         public static string GetNodeDisplayName(int nodeId)
         {
-            return nodeNames.TryGetValue(nodeId, out string? name)
-                ? $"{name} (Node {nodeId})"
+            return nodeNames.TryGetValue(nodeId, out string? name) 
+                ? $"{name} (Node {nodeId})" 
                 : $"Node {nodeId}";
         }
 
         // Helper method để lấy chỉ tên node (không có ID)
         public static string GetNodeNameOnly(int nodeId)
         {
-            return nodeNames.TryGetValue(nodeId, out string? name)
-                ? name
+            return nodeNames.TryGetValue(nodeId, out string? name) 
+                ? name 
                 : $"Node {nodeId}";
         }
 
@@ -500,7 +499,7 @@ namespace BullyAlgorithmDemo
                     pingTasks.Add(Task.Run(async () =>
                     {
                         bool isAlive = await PingNode(nodeUrls[nodeId]);
-
+                        
                         // Update UI trên main thread
                         if (!isDisposing && !this.IsDisposed)
                         {
