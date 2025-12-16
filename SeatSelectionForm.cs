@@ -816,7 +816,7 @@ namespace CinemaTicketBooking
 
                 MessageBox.Show(
                     message,
-                    failedSeats.Count > 0 ? "Booking Partially Successful" : "Booking Successful",
+                    failedSeats.Count > 0 ? "Booking Failed" : "Booking Successful",
                     MessageBoxButtons.OK,
                     failedSeats.Count > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information
                 );
